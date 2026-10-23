@@ -89,6 +89,31 @@ async function gotoXZ(page, txt) {
   assert(px && px[0] > 200 && px[1] > 200 && px[2] > 200, 'white origin block, got ' + px);
   step('readout and go-to match tile content block-for-block (100,-200 red; 0,0 white; F3 x y z parsed)');
 
+  // every zoom level must draw the world in the same place: probe just inside and just outside the north edge of the
+  // mock's white square (x 1000..1095, z -1000..-905). Zoomed-out tiles used to drift north by (2^k - 1) * 32 blocks.
+  for (const zoom of [0, 1, 2, 3, 4, 5, 6, 7]) {
+    const bpp = 1 / (4 * Math.pow(2, zoom - 5)), off = Math.max(2, Math.ceil(4 * bpp));
+    await page.evaluate(([zoom]) => window.placer.map.setView(L.latLng(1000, 1048), zoom, { animate: false }), [zoom]);
+    await page.waitForFunction(z => { const m = window.placer.map; let ok = false;
+      m.eachLayer(l => { if (l instanceof L.GridLayer && l._loading === false && l._tileZoom === Math.min(5, Math.max(0, z))) ok = true; }); return ok; }, zoom);
+    await page.waitForTimeout(300);
+    const probe = (x, z) => page.evaluate(([x, z]) => {
+      const m = window.placer.map; let layer; m.eachLayer(l => { if (l instanceof L.GridLayer) layer = l; });
+      const p = m.latLngToContainerPoint(L.latLng(-z, x)), r0 = m.getContainer().getBoundingClientRect(), sx = r0.left + p.x, sy = r0.top + p.y;
+      const img = Array.from(layer._levels[layer._tileZoom].el.querySelectorAll('img.leaflet-tile-loaded')).find(i => {
+        const r = i.getBoundingClientRect(); return sx >= r.left && sx < r.right && sy >= r.top && sy < r.bottom; });
+      if (!img) return null;
+      const r = img.getBoundingClientRect(), c = document.createElement('canvas'); c.width = c.height = 128;
+      const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+      return Array.from(g.getImageData(Math.floor((sx - r.left) / r.width * 128), Math.floor((sy - r.top) / r.height * 128), 1, 1).data).slice(0, 3);
+    }, [x, z]);
+    const inside = await probe(1048.5, -1000 + off + 0.5), outside = await probe(1048.5, -1000 - off + 0.5);
+    const white = px => px && px[0] > 200 && px[1] > 200 && px[2] > 200;
+    assert(white(inside) && !white(outside), 'zoom ' + zoom + ': square edge in place (inside ' + inside + ', outside ' + outside + ')');
+  }
+  step('tiles line up at every zoom level 0–7 (edge of a 96-block square stays put)');
+  await page.evaluate(() => window.placer.map.setView(L.latLng(-0.5, 0.5), 5, { animate: false }));
+
   // zoom to block level and back out with the buttons
   await page.click('.leaflet-control-zoom-in'); await page.waitForTimeout(350);
   await page.click('.leaflet-control-zoom-in'); await page.waitForTimeout(350);

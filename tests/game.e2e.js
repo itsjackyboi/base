@@ -9,7 +9,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-const BASE = 'http://127.0.0.1:8128/pintland/';
+const BASE = 'http://127.0.0.1:8128/pintland/index.html';
 const OUT = process.argv[2] || path.join(__dirname, 'screens');
 fs.mkdirSync(OUT, { recursive: true });
 const DATA = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'game', 'locations.json'), 'utf8'));
@@ -141,7 +141,7 @@ async function playRound(page, dx, dz, opts) {
   await page.waitForSelector('#results.show');
   assert.strictEqual(await page.textContent('#resTotal'), '294');
   const share = await page.textContent('#shareText');
-  assert.strictEqual(share, 'Pintland Tap #3 — 294/500\n🟩🟨🟩🟥🟧\nhttp://127.0.0.1:8128/pintland/');
+  assert.strictEqual(share, 'Pintland Tap #3 — 294/500\n🟩🟨🟩🟥🟧\nhttp://127.0.0.1:8128/pintland/index.html');
   assert.strictEqual(await page.locator('#resRounds tr').count(), 5);
   const statVals = await page.$$eval('#stats b', b => b.map(x => x.textContent));
   assert.deepStrictEqual(statVals, ['1', '1', '1', '294']);
@@ -260,7 +260,7 @@ async function playRound(page, dx, dz, opts) {
   /* ---------------- login required ---------------- */
   const lctx = await browser.newContext({ viewport: { width: 1000, height: 700 } });
   const lp = await lctx.newPage();
-  await lp.goto('http://127.0.0.1:8129/pintland/');
+  await lp.goto('http://127.0.0.1:8129/pintland/index.html');
   await lp.waitForSelector('#login.show');
   assert.strictEqual(await lp.getAttribute('#login a', 'href'), '/login.html');
   assert.strictEqual(await lp.evaluate(() => document.querySelectorAll('img.leaflet-tile').length), 0, 'no map without login');

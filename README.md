@@ -4,7 +4,7 @@ A daily map-guessing game for the Pintland Isles Minecraft server, played on the
 
 ```
 game/                 everything here is uploaded to plugins/dynmap/web/pintland/
-  index.html          the daily game (served at /pintland/)
+  index.html          the daily game: http://51.161.71.220:8128/pintland/index.html
   js/game.js          game flow: rounds, reveal, results, stats
   locations.json      the locations the game picks from (export from the placer)
   placer.html         place every location, export locations.json
@@ -20,10 +20,10 @@ tests/                core.test.js (unit), placer.e2e.js (Playwright)
    (file manager or SFTP), keeping the folders: `pintland/index.html`, `pintland/locations.json`,
    `pintland/placer.html`, `pintland/js/core.js`, `pintland/js/game.js`, `pintland/vendor/leaflet/...`.
 2. Log in to Dynmap at `http://51.161.71.220:8128/` (the tiles need the login cookie).
-3. Play at `http://51.161.71.220:8128/pintland/`. The placer is at `/pintland/placer.html`.
+3. Play at `http://51.161.71.220:8128/pintland/index.html`. The placer is at `/pintland/placer.html`.
 
-If a page returns 404 right after uploading, run `dynmap reload` in the console. If `/pintland/` itself
-404s but `/pintland/index.html` works, share the `index.html` link instead.
+Dynmap's web server doesn't serve folder index pages, so always link `index.html` (the share text does).
+If a page returns 404 right after uploading, run `dynmap reload` in the console.
 
 To add or move locations later: open the placer, Import the current `locations.json`, edit, Export, and
 upload the new `locations.json` over the old one. Anyone who has already started today's puzzle keeps

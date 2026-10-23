@@ -212,7 +212,8 @@
   function totals() {
     var t = 0; prog.rounds.forEach(function (r) { t += r.s; }); return t;
   }
-  function shareUrl() { return location.origin + location.pathname.replace(/[^/]*$/, ''); }
+  // Dynmap's web server doesn't serve folder index pages, so the link must name index.html
+  function shareUrl() { return location.origin + location.pathname.replace(/\/$/, '/index.html'); }
   function shareText() {
     return 'Pintland Tap ' + prog.label + ' — ' + totals() + '/' + (N * 100) + '\n' +
       prog.rounds.map(function (r) { return PT.tile(r.s); }).join('') + '\n' + shareUrl();

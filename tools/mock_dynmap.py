@@ -4,14 +4,15 @@
   python3 tools/mock_dynmap.py [--port 8128] [--login-required]
 
 Serves:
-  /pintland/...        -> game/            (same layout as plugins/dynmap/web/pintland/)
+  /pintland/...        -> game/            (same layout as plugins/dynmap/web/pintland/; no folder index, like Dynmap)
   /up/configuration    -> {}  (or {"error":"login-required"} with --login-required)
   /login.html          -> a stub page
   /tiles/<world>/flat/<gx>_<gy>/<prefix><nx>_<ny>.jpg -> generated test tiles
 
 The generated world is synthetic: blobs of "land" roughly where the real landmasses sit, a one-block
 checkerboard so block alignment is visible at full zoom, a red block at every (x, z) that are both
-multiples of 100, a white block at (0, 0), and grid lines every 32 blocks (one base tile). Tiles far out in
+multiples of 100, a white block at (0, 0), a white 96-block square at x 1000..1095, z -1000..-905, and grid
+lines every 32 blocks (one base tile). Zoomed-out tiles follow Dynmap's grid, which starts at z = -32. Tiles far out in
 the ocean return 404, like unexplored areas on the live server.
 """
 import argparse
@@ -54,9 +55,9 @@ def land_mask(x, z):
 def render(k, nx, ny):
     """Tile with zoom-out level k (prefix 'z'*k) and Dynmap coords nx, ny -> JPEG bytes, or None for 404."""
     f = 2 ** k
-    cx, cy = nx // f, -ny // f - 1          # inverse of core.js tileUrl
     span = 32 * f                           # blocks per tile side
-    x0, z0 = cx * span, cy * span
+    # Dynmap's grid starts one base tile north of z = 0 (see makeCRS in core.js), so zoomed-out tiles are offset by 32
+    x0, z0 = (nx // f) * span, (-ny // f) * span - 32
     nearest = math.hypot(max(abs(x0 + span / 2) - span / 2, 0), max(abs(z0 + span / 2) - span / 2, 0))
     if nearest > EXPLORED:
         return None
@@ -73,6 +74,8 @@ def render(k, nx, ny):
     if span <= 512:
         line = (np.mod(bx, 32) == 0) | (np.mod(bz, 32) == 0)
         img[line] = img[line] * 0.6 + 40
+    sq = (bx >= 1000) & (bx < 1096) & (bz >= -1000) & (bz < -904)  # a white square to check alignment at every zoom
+    img[sq] = (250, 250, 250)
     hund = (np.mod(bx, 100) == 0) & (np.mod(bz, 100) == 0)
     img[hund] = (220, 30, 30)
     img[(bx == 0) & (bz == 0)] = (255, 255, 255)
@@ -113,11 +116,8 @@ class Handler(SimpleHTTPRequestHandler):
             if data is None:
                 return self.send_bytes(404, b'not found', 'text/plain')
             return self.send_bytes(200, data, 'image/jpeg')
-        if path == '/pintland':
-            self.send_response(301)
-            self.send_header('Location', '/pintland/')
-            self.end_headers()
-            return
+        if path.endswith('/'):     # like Dynmap's web server: no folder index pages, use /pintland/index.html
+            return self.send_bytes(404, b'not found', 'text/plain')
         if path.startswith('/pintland/'):
             self.path = self.path[len('/pintland'):]
             return super().do_GET()
@@ -132,7 +132,7 @@ def main():
     ap.add_argument('--login-required', action='store_true')
     args = ap.parse_args()
     Handler.login_required = args.login_required
-    print('Mock Dynmap on http://127.0.0.1:%d/pintland/' % args.port)
+    print('Mock Dynmap on http://127.0.0.1:%d/pintland/index.html' % args.port)
     ThreadingHTTPServer(('127.0.0.1', args.port), Handler).serve_forever()
 
 

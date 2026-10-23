@@ -9,20 +9,23 @@
   var MAX_ZOOM = NATIVE_ZOOM + 2;
   var MIN_ZOOM = -3;        // below 0 the 'zzzzz' tiles are scaled down, so the whole box fits on a phone
 
-  /* ---------- coordinates: 1 map unit = 1 block, lat = -z (north is up), lng = x ---------- */
+  /* ---------- coordinates: 1 map unit = 1 block, lat = -z (north is up), lng = x ----------
+   * Dynmap's HD projection (hdmap.js) puts lat = -(128 - mapY) / 2^mapzoomout, i.e. the tile grid starts one native
+   * tile (32 blocks) north of z = 0. Base tiles look the same either way, but every zoomed-out tile is aligned to that
+   * origin, so the CRS must carry the same offset or zoomed-out levels drift north by (2^k - 1) * 32 blocks. */
   function makeCRS() {
-    var a = PX_PER_BLOCK / Math.pow(2, NATIVE_ZOOM);
-    return L.extend({}, L.CRS.Simple, { transformation: new L.Transformation(a, 0, -a, 0) });
+    var a = PX_PER_BLOCK / Math.pow(2, NATIVE_ZOOM), off = TILE / Math.pow(2, NATIVE_ZOOM);
+    return L.extend({}, L.CRS.Simple, { transformation: new L.Transformation(a, 0, -a, off) });
   }
   function toLL(x, z) { return L.latLng(-z, x); }
   function fromLL(ll) { return { x: ll.lng, z: -ll.lat }; }
   function boxToBounds(b) { return L.latLngBounds(toLL(b.x0, b.z0), toLL(b.x1, b.z1)); }
   function dist(a, b) { var dx = a.x - b.x, dz = a.z - b.z; return Math.sqrt(dx * dx + dz * dz); }
 
-  /* ---------- Dynmap tile layer (same URL scheme Dynmap's own page uses) ---------- */
+  /* ---------- Dynmap tile layer (same URL scheme as getTileInfo/getTileName in Dynmap's own page) ---------- */
   function tileUrl(base, c) {
     var k = NATIVE_ZOOM - c.z, f = Math.pow(2, k);
-    var nx = c.x * f, ny = -(c.y + 1) * f;
+    var nx = c.x * f, ny = -c.y * f || 0;     // "Y is inverted for HD-map"; || 0 turns -0 into 0
     var prefix = k > 0 ? new Array(k + 1).join('z') + '_' : '';
     return base + Math.floor(nx / 32) + '_' + Math.floor(ny / 32) + '/' + prefix + nx + '_' + ny + '.jpg';
   }
