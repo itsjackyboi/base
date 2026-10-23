@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17120f">
+<title>Pintland Tap</title>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<style>
+  :root {
+    --maroon: #7B1C1C; --maroon-hi: #9a2a2a; --gold: #C9A84C; --gold-dim: #8f7838;
+    --bg: #17120f; --panel: #211915; --panel-2: #2a201b; --line: #3b2e26;
+    --text: #efe6d6; --muted: #a8998a; --faint: #6f6257;
+    --green: #5fb760; --yellow: #e2c13f; --orange: #e8893a; --red: #d0473f;
+    --serif: "Palatino Linotype", Palatino, "Book Antiqua", "URW Palladio L", P052, Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --top: calc(52px + env(safe-area-inset-top));
+    --bar: calc(92px + env(safe-area-inset-bottom));
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 15px/1.4 var(--sans); overflow: hidden; }
+  body { height: 100vh; height: 100dvh; -webkit-tap-highlight-color: transparent; }
+  button { font: inherit; color: inherit; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: normal; margin: 0; }
+
+  #map { position: absolute; inset: 0; background: #1e1e1e; }
+  .leaflet-container { background: #1e1e1e; font: 12px/1.3 var(--sans); }
+  .leaflet-tile { outline: 1px solid transparent; }
+  #map.crisp .leaflet-tile { image-rendering: pixelated; }
+  body.guessing #map, body.guessing #map .leaflet-grab { cursor: crosshair; }
+  body.guessing #map.leaflet-drag-target, body.guessing #map .leaflet-drag-target { cursor: grabbing; }
+  .leaflet-bar { border: 1px solid var(--line) !important; box-shadow: 0 2px 8px rgba(0,0,0,.4) !important; }
+  .leaflet-bar a { background: var(--panel) !important; color: var(--text) !important; border-bottom-color: var(--line) !important; width: 36px !important; height: 36px !important; line-height: 36px !important; font-size: 20px !important; }
+  .leaflet-bar a:hover { background: var(--panel-2) !important; color: var(--gold) !important; }
+  .leaflet-bottom.leaflet-right { bottom: calc(var(--bar) + 4px); right: env(safe-area-inset-right); }
+  .leaflet-tooltip.lbl { background: rgba(23,18,15,.92); color: var(--text); border: 1px solid var(--line); box-shadow: none; padding: 2px 7px; font-size: 12px; }
+  .leaflet-tooltip.lbl::before { display: none; }
+
+  /* top bar */
+  #top { position: absolute; top: 0; left: 0; right: 0; z-index: 900; height: var(--top); padding: env(safe-area-inset-top) calc(12px + env(safe-area-inset-right)) 0 calc(14px + env(safe-area-inset-left));
+    display: flex; align-items: center; gap: 12px; background: linear-gradient(rgba(23,18,15,.96), rgba(23,18,15,.82)); border-bottom: 1px solid var(--line); }
+  #top h1 { font-size: 21px; color: var(--gold); white-space: nowrap; }
+  #top h1 small { color: var(--muted); font-size: 15px; margin-left: 4px; }
+  #top .sp { flex: 1; }
+  #dots { display: flex; gap: 5px; }
+  #dots i { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--faint); display: block; }
+  #dots i.cur { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,168,76,.25); }
+  #total { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; white-space: nowrap; }
+  #total b { color: var(--text); }
+  .iconbtn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); cursor: pointer; flex: none; }
+  .iconbtn:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+  /* prompt card */
+  #prompt { position: absolute; z-index: 850; top: calc(var(--top) + 10px); left: 50%; transform: translateX(-50%); width: min(520px, calc(100% - 20px));
+    background: rgba(33,25,21,.95); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px 11px; text-align: center; box-shadow: 0 4px 18px rgba(0,0,0,.45); display: none; }
+  #prompt.show { display: block; }
+  #prompt .meta { font-size: 12px; color: var(--muted); letter-spacing: .4px; text-transform: uppercase; display: flex; justify-content: center; gap: 8px; align-items: center; }
+  #prompt h2 { font-size: 25px; line-height: 1.2; margin: 3px 0 1px; }
+  #prompt h2 span { color: var(--gold); }
+  #prompt .sub { color: var(--muted); font-size: 14px; }
+  .diff { display: inline-block; padding: 0 7px; border-radius: 999px; font-size: 11px; color: #15100d; font-weight: 700; letter-spacing: .3px; }
+  .diff.easy { background: #62b86a; } .diff.medium { background: #4f9fe0; } .diff.hard { background: #ec8f3a; } .diff.expert { background: #b67be6; }
+
+  /* bottom bar */
+  #bar { position: absolute; z-index: 850; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom)); width: min(520px, calc(100% - 20px)); display: none; }
+  #bar.show { display: block; }
+  .big { width: 100%; border: 0; border-radius: 12px; padding: 15px 18px; font-size: 17px; font-weight: 700; cursor: pointer; letter-spacing: .2px; box-shadow: 0 4px 18px rgba(0,0,0,.45); }
+  .big.gold { background: var(--gold); color: #1d150f; }
+  .big.maroon { background: var(--maroon); color: #fff; border: 1px solid var(--maroon-hi); }
+  .big:disabled { background: #3a2f28; color: var(--faint); cursor: default; box-shadow: none; }
+  .big:not(:disabled):active { transform: translateY(1px); }
+  #reveal { background: rgba(33,25,21,.96); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; box-shadow: 0 4px 18px rgba(0,0,0,.45); display: flex; align-items: center; gap: 14px; }
+  #reveal .sc { font-family: var(--serif); font-size: 38px; line-height: 1; min-width: 64px; text-align: center; font-variant-numeric: tabular-nums; }
+  #reveal .txt { flex: 1; min-width: 0; }
+  #reveal .vd { font-family: var(--serif); font-size: 20px; color: var(--gold); }
+  #reveal .ds { color: var(--muted); font-size: 14px; }
+  #reveal .big { width: auto; padding: 12px 18px; font-size: 16px; box-shadow: none; flex: none; }
+
+  /* markers */
+  .guess-dot { width: 22px; height: 22px; border-radius: 50%; background: var(--maroon); border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.7); position: relative; }
+  .guess-dot::after { content: ''; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; background: #fff; border-radius: 50%; }
+  .ans svg { display: block; overflow: visible; filter: drop-shadow(0 1px 3px rgba(0,0,0,.7)); }
+  .ans { animation: drop .35s ease-out; }
+  @keyframes drop { from { transform: translateY(-14px); opacity: 0; } }
+  .num { width: 20px; height: 20px; border-radius: 50%; background: var(--maroon); color: #fff; border: 2px solid #fff; font: 700 11px/16px var(--sans); text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.6); }
+
+  /* cards / sheets */
+  .veil { position: fixed; inset: 0; z-index: 1500; background: rgba(10,7,6,.55); display: none; align-items: center; justify-content: center;
+    padding: calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left)); }
+  .veil.show { display: flex; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; width: min(460px, 100%); max-height: 100%; overflow: auto; box-shadow: 0 12px 50px rgba(0,0,0,.6); padding: 22px 22px 20px; }
+  .card h2 { font-size: 27px; color: var(--gold); text-align: center; }
+  .card .kicker { text-align: center; color: var(--muted); font-size: 13px; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 4px; }
+  .card p { color: var(--muted); margin: 10px 0; }
+  .card ul { color: var(--muted); padding-left: 20px; margin: 10px 0 16px; }
+  .card li { margin: 4px 0; }
+  .card li b { color: var(--text); font-weight: 600; }
+  .card .big { margin-top: 6px; }
+  .rule { height: 1px; background: var(--line); margin: 14px 0; border: 0; }
+
+  #results .card { width: min(500px, 100%); }
+  .totalbig { text-align: center; font-family: var(--serif); font-size: 54px; line-height: 1.05; margin: 6px 0 2px; }
+  .totalbig small { font-size: 22px; color: var(--muted); }
+  .squares { text-align: center; font-size: 22px; letter-spacing: 2px; }
+  .rounds { width: 100%; border-collapse: collapse; margin: 12px 0 4px; font-size: 14px; }
+  .rounds td { padding: 7px 4px; border-top: 1px solid var(--line); vertical-align: middle; }
+  .rounds td.n { color: var(--faint); width: 20px; }
+  .rounds td.nm { line-height: 1.25; }
+  .rounds td.nm small { color: var(--faint); display: block; font-size: 12px; }
+  .rounds td.d { color: var(--muted); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .rounds td.s { text-align: right; font-weight: 700; width: 46px; font-variant-numeric: tabular-nums; }
+  .share { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; white-space: pre-wrap; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; user-select: all; -webkit-user-select: all; word-break: break-all; }
+  .row2 { display: flex; gap: 8px; margin-top: 8px; }
+  .row2 .big { padding: 12px; font-size: 15px; box-shadow: none; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; margin: 4px 0; }
+  .stats b { display: block; font-family: var(--serif); font-size: 26px; font-weight: normal; }
+  .stats span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+  .next { text-align: center; color: var(--muted); font-size: 14px; }
+  .next b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+  #reviewBar { position: absolute; z-index: 850; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom)); width: min(520px, calc(100% - 20px)); display: none; }
+  #reviewBar.show { display: block; }
+
+  #toast { position: fixed; left: 50%; top: calc(var(--top) + 14px); transform: translateX(-50%) translateY(-10px); background: var(--panel-2); border: 1px solid var(--gold-dim); border-radius: 8px; padding: 8px 14px; z-index: 3000; opacity: 0; transition: .2s; pointer-events: none; max-width: calc(100% - 32px); }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 560px) {
+    #top h1 { font-size: 18px; }
+    #top h1 small { font-size: 13px; }
+    #total { display: none; }
+    #dots i { width: 11px; height: 11px; }
+    #prompt { padding: 8px 12px 9px; }
+    #prompt h2 { font-size: 21px; }
+    #reveal .sc { font-size: 32px; min-width: 52px; }
+    #reveal { gap: 10px; padding: 10px 12px; }
+    #reveal .vd { font-size: 18px; }
+    .card { padding: 18px 16px 16px; }
+    .totalbig { font-size: 46px; }
+  }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<header id="top">
+  <h1>Pintland Tap <small id="pno"></small></h1>
+  <span class="sp"></span>
+  <span id="total"></span>
+  <div id="dots"></div>
+  <button class="iconbtn" id="helpBtn" title="How to play" aria-label="How to play">?</button>
+</header>
+
+<section id="prompt" aria-live="polite">
+  <div class="meta"><span id="pRound"></span><span class="diff" id="pDiff"></span></div>
+  <h2>Find <span id="pName"></span></h2>
+  <div class="sub" id="pSub"></div>
+</section>
+
+<section id="bar">
+  <button class="big gold" id="lockBtn" disabled>Click the map to guess</button>
+  <div id="reveal" style="display:none">
+    <div class="sc" id="rScore"></div>
+    <div class="txt"><div class="vd" id="rVerdict"></div><div class="ds" id="rDist"></div></div>
+    <button class="big maroon" id="nextBtn">Next</button>
+  </div>
+</section>
+
+<section id="reviewBar"><button class="big gold" id="backBtn">Back to results</button></section>
+
+<div class="veil" id="start"><div class="card">
+  <div class="kicker" id="sKicker"></div>
+  <h2>Pintland Tap</h2>
+  <p style="text-align:center">Five places across the Isles, easiest first.</p>
+  <ul>
+    <li>A name appears. <b>Tap the map</b> where you think it is. Tap again to move your guess.</li>
+    <li>Pan and zoom as much as you like, then <b>Lock in</b>. A locked guess can't be changed.</li>
+    <li>Closer scores more: <b id="ruleScore">100 for the exact block.</b></li>
+    <li>One puzzle a day, the same for everyone. It changes at midnight Eastern.</li>
+  </ul>
+  <button class="big gold" id="startBtn">Play</button>
+</div></div>
+
+<div class="veil" id="results"><div class="card">
+  <div class="kicker" id="resKicker"></div>
+  <div class="totalbig"><span id="resTotal"></span><small> / 500</small></div>
+  <div class="squares" id="resSquares"></div>
+  <table class="rounds" id="resRounds"></table>
+  <div class="share" id="shareText"></div>
+  <div class="row2">
+    <button class="big gold" id="copyBtn">Copy result</button>
+    <button class="big maroon" id="reviewBtn">Review map</button>
+  </div>
+  <hr class="rule">
+  <div class="stats" id="stats"></div>
+  <hr class="rule">
+  <div class="next" id="nextPuzzle"></div>
+</div></div>
+
+<div class="veil" id="login"><div class="card" style="text-align:center">
+  <h2>Log in to Dynmap first</h2>
+  <p>Pintland Tap plays on the server's Dynmap, and the map needs you to be logged in.</p>
+  <a class="big gold" href="/login.html" style="display:block;text-decoration:none">Open Dynmap login</a>
+  <p style="font-size:13px">Then come back to this page.</p>
+</div></div>
+
+<div class="veil" id="oops"><div class="card" style="text-align:center">
+  <h2>Something went wrong</h2>
+  <p id="oopsMsg"></p>
+  <button class="big gold" onclick="location.reload()">Reload</button>
+</div></div>
+
+<div id="toast"></div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="js/core.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

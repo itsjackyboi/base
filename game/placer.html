@@ -89,6 +89,8 @@
   .row .sub { font-size: 11px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .row select { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; font-size: 12px; padding: 1px 2px; flex: none; }
   .row .mv { flex: none; }
+  .row .del { flex: none; width: 26px; height: 26px; padding: 0; border: 1px solid transparent; background: none; border-radius: 5px; color: var(--faint); cursor: pointer; font-size: 16px; line-height: 1; }
+  .row .del:hover { color: #ffb3b3; border-color: #c44; }
   .empty { padding: 20px 16px; color: var(--faint); text-align: center; }
 
   /* ---------- map ---------- */
@@ -639,7 +641,8 @@
           '<div class="main"><div class="nm">' + esc(l.name) + '</div><div class="sub">' + GLYPH[l.kind] + ' ' + l.kind +
           (l.seed ? '' : ' · custom') + (p ? ' · ' + fmt(l.x) + ', ' + fmt(l.z) : '') + (l.hint ? ' · ' + esc(l.hint) : '') + '</div></div>' +
           (p ? '<button class="btn small mv" data-arm="' + esc(l.id) + '" title="Re-arm to move it">Move</button>' : '') +
-          '<select data-diff="' + esc(l.id) + '" aria-label="Difficulty">' + opts(DIFFS, l.difficulty) + '</select></div>');
+          '<select data-diff="' + esc(l.id) + '" aria-label="Difficulty">' + opts(DIFFS, l.difficulty) + '</select>' +
+          '<button class="del" data-del="' + esc(l.id) + '" title="Delete ' + esc(l.name) + '" aria-label="Delete ' + esc(l.name) + '">×</button></div>');
       });
     });
     if (!html.length) html.push('<div class="empty">Nothing matches these filters.</div>');
@@ -710,6 +713,8 @@
     if (e.target.closest('select')) return;
     var mv = e.target.closest('[data-arm]');
     if (mv) { arm(mv.dataset.arm); return; }
+    var del = e.target.closest('[data-del]');
+    if (del) { deleteLoc(byId(del.dataset.del)); return; }
     var row = e.target.closest('.row'); if (!row) return;
     var l = byId(row.dataset.id); if (!l) return;
     if (ui.armed === l.id) { disarm(); return; }
@@ -750,12 +755,17 @@
     else if (act === 'show') select(l.id, true);
     else if (act === 'done') { disarm(true); ui.selected = null; renderAll(); }
     else if (act === 'unplace') commit('unplace ' + l.name, function () { l.x = null; l.z = null; });
-    else if (act === 'delete') {
-      if (ui.armed === l.id) disarm(true);
-      commit('delete ' + l.name, function () { state.locations.splice(state.locations.indexOf(l), 1); ui.selected = null; });
-      toast('Deleted ' + l.name + '. Undo brings it back.');
-    }
+    else if (act === 'delete') deleteLoc(l);
   });
+  function deleteLoc(l) {
+    if (!l) return;
+    if (ui.armed === l.id) disarm(true);
+    commit('delete ' + l.name, function () {
+      state.locations.splice(state.locations.indexOf(l), 1);
+      if (ui.selected === l.id) ui.selected = null;
+    });
+    toast('Deleted ' + l.name + '. Undo (Ctrl+Z) brings it back.');
+  }
 
   document.getElementById('undoBtn').onclick = undo;
 
@@ -881,6 +891,8 @@
     if (e.key === 'Escape') {
       var open = document.querySelector('.modal-bg.show');
       if (open) closeModal(open); else if (ui.armed) disarm(); else if (ui.selected) { ui.selected = null; renderAll(); }
+    } else if ((e.key === 'Delete' || e.key === 'Backspace') && !typing && ui.selected && !document.querySelector('.modal-bg.show')) {
+      e.preventDefault(); deleteLoc(byId(ui.selected));
     } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !typing) {
       e.preventDefault(); undo();
     }

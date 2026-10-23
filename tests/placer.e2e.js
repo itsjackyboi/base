@@ -180,7 +180,11 @@ async function gotoXZ(page, txt) {
   await page.click('#list .row[data-id="barnaby-the-ferryman-2"]');
   await page.click('#editor [data-act=delete]');
   await page.keyboard.press('Escape');
-  step('delete + undo restores the location');
+  await page.click('#list [data-del="sea-monster-ribcage"]');
+  assert.strictEqual(await loc(page, 'Sea Monster Ribcage'), undefined, 'row × deletes');
+  await page.keyboard.press('Control+z');
+  assert(await loc(page, 'Sea Monster Ribcage'), 'Ctrl+Z brings it back');
+  step('delete + undo restores the location (editor button, row ×, Ctrl+Z)');
 
   // filters
   await page.locator('#fDiff [data-d=hard]').click();
