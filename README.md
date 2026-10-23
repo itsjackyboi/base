@@ -51,6 +51,10 @@ The draft autosaves to this browser's `localStorage`. Export often anyway: **Exp
 - **+ Add location** adds a custom entry (small builds, NPCs), then click the map to place it.
 - Positions are whole block coordinates, the same as F3. The pin tip sits on the centre of that block.
 - "go to" takes `x, z` or F3's `x y z`.
+- **Check pins for the zoom shift** lists every placed pin with close-ups of its spot and of the spots 32, 96,
+  224, 480 and 992 blocks south. Before the zoom fix, zoomed-out views were drawn that far north, so a pin
+  placed there is that far north of its real spot. Click the right close-up to move the pin, or mark it
+  **Looks right**. Pins whose block looks like water are flagged and listed first.
 - Delete a location with the × on its row, the Delete button in its editor, or the Delete key while it's
   selected.
 - Ctrl/⌘+Z undoes the last change (placing, moving, deleting, editing, importing).

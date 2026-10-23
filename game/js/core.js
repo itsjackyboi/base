@@ -29,8 +29,9 @@
     var prefix = k > 0 ? new Array(k + 1).join('z') + '_' : '';
     return base + Math.floor(nx / 32) + '_' + Math.floor(ny / 32) + '/' + prefix + nx + '_' + ny + '.jpg';
   }
+  function tileBase(world, mapName) { return '/tiles/' + encodeURIComponent(world).replace(/'/g, '%27') + '/' + mapName + '/'; }
   function makeTileLayer(world, mapName) {
-    var base = '/tiles/' + encodeURIComponent(world).replace(/'/g, '%27') + '/' + mapName + '/';
+    var base = tileBase(world, mapName);
     var Layer = L.GridLayer.extend({
       createTile: function (c, done) {
         var img = document.createElement('img');
@@ -151,7 +152,7 @@
   global.PT = {
     NATIVE_ZOOM: NATIVE_ZOOM, MIN_ZOOM: MIN_ZOOM, MAX_ZOOM: MAX_ZOOM,
     makeCRS: makeCRS, toLL: toLL, fromLL: fromLL, boxToBounds: boxToBounds, dist: dist,
-    tileUrl: tileUrl, makeTileLayer: makeTileLayer, makeMap: makeMap, lockTo: lockTo,
+    tileBase: tileBase, tileUrl: tileUrl, makeTileLayer: makeTileLayer, makeMap: makeMap, lockTo: lockTo,
     DIFFS: DIFFS, score: score, verdict: verdict, tile: tile,
     mulberry32: mulberry32, shuffled: shuffled, bagPick: bagPick, pickDaily: pickDaily,
     ymd: ymd, puzzleNumber: puzzleNumber, secondsToNext: secondsToNext, store: store

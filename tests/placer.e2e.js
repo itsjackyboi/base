@@ -160,7 +160,9 @@ async function gotoXZ(page, txt) {
   step('dragged Providence pin: ' + fmt(p.x) + ',' + fmt(p.z) + ' → ' + fmt(p2.x) + ',' + fmt(p2.z));
 
   // re-arm a placed item via its Move button
-  await page.locator('#list .row', { hasText: 'Providence' }).locator('[data-arm]').click();
+  const moveBtn = page.locator('#list .row', { hasText: 'Providence' }).locator('[data-arm]');
+  await moveBtn.evaluate(el => el.scrollIntoView({ block: 'center' }));   // keep it clear of the sticky group header
+  await moveBtn.click();
   await page.mouse.click(c.x - 100, c.y - 60);
   const p3 = await loc(page, 'Providence');
   assert(p3.x < p2.x && p3.z < p2.z, 're-armed and moved');
@@ -300,6 +302,31 @@ async function gotoXZ(page, txt) {
   await page.click('#undoBtn');
   assert.strictEqual(await page.evaluate(() => window.placer.state.locations.filter(l => l.x !== null).length), 2);
   step('minimal import keeps the wishlist; undo reverts the import');
+
+  // pin check: a pin placed 480 blocks north of its real spot (in the mock's ocean) is flagged, and the 480-south
+  // tile moves it onto land; a correct pin isn't flagged
+  await page.click('#importBtn');
+  await page.fill('#imText', JSON.stringify({ locations: [
+    { name: 'Shifted Town', kind: 'town', difficulty: 'easy', x: 850, z: -1080 },
+    { name: 'Good Town', kind: 'town', difficulty: 'easy', x: 850, z: -600 } ], unplaced: [] }));
+  await page.click('#imGo');
+  await page.click('#auditBtn');
+  await page.waitForSelector('#auList .arow .thumb');
+  await page.waitForFunction(() => document.querySelectorAll('#auList .thumb .wet').length >= 1);
+  await page.waitForTimeout(500);
+  const rows = await page.$$eval('#auList .arow', r => r.map(x => [x.dataset.id, !!x.querySelector('.st.wet')]));
+  assert.deepStrictEqual(rows, [['shifted-town', true], ['good-town', false]], 'flagged pin first: ' + JSON.stringify(rows));
+  assert.strictEqual(await page.locator('#auList .arow[data-id="shifted-town"] .thumb[data-shift="480"] .wet').count(), 0, '480 south is land');
+  await page.screenshot({ path: path.join(OUT, 'laptop-pin-check.png') });
+  await page.click('#auList .arow[data-id="shifted-town"] .thumb[data-shift="480"]');
+  assert.strictEqual((await loc(page, 'Shifted Town')).z, -600);
+  await page.waitForFunction(() => /moved 480 south/.test(document.querySelector('#auList .arow[data-id="shifted-town"]').textContent));
+  await page.click('#auList .arow[data-id="good-town"] [data-au="ok"]');
+  await page.waitForFunction(() => /2 pins · 0 in water · 2 checked/.test(document.getElementById('auSum').textContent));
+  await page.keyboard.press('Control+z');
+  assert.strictEqual((await loc(page, 'Shifted Town')).z, -1080, 'undo works from the pin check');
+  await page.keyboard.press('Escape');
+  step('pin check flags a pin in water, its 480-south tile moves it onto land, "Looks right" marks the other, undo works');
 
   assert.deepStrictEqual(errors, [], 'no page errors');
   await ctx.close();

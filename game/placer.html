@@ -38,7 +38,8 @@
   .count-note { margin-top: 6px; font-size: 11px; color: var(--faint); }
   .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; display: inline-block; }
 
-  .actions { display: flex; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  .actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  #auditBtn { flex-basis: 100%; }
   .btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; white-space: nowrap; }
   .btn:hover:not(:disabled) { border-color: var(--gold-dim); }
   .btn:disabled { opacity: .45; cursor: default; }
@@ -75,10 +76,11 @@
   .ed-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .ed-actions .spacer { flex: 1; }
 
-  #list { flex: 1; overflow-y: auto; min-height: 0; padding: 4px 0 calc(12px + env(safe-area-inset-bottom)); }
+  #scroll { flex: 1; overflow-y: auto; min-height: 0; }   /* editor and list scroll together, so an open editor never squeezes the list */
+  #list { padding: 4px 0 calc(12px + env(safe-area-inset-bottom)); }
   .group-h { position: sticky; top: 0; background: var(--panel); padding: 8px 16px 4px; font-family: var(--serif); color: var(--gold); font-size: 13px; letter-spacing: .4px; display: flex; align-items: center; gap: 6px; z-index: 1; }
   .group-h small { color: var(--faint); font-family: var(--sans); }
-  .row { display: flex; align-items: center; gap: 8px; padding: 6px 16px; cursor: pointer; border-left: 3px solid transparent; }
+  .row { display: flex; align-items: center; gap: 8px; padding: 6px 16px; cursor: pointer; border-left: 3px solid transparent; scroll-margin-top: 36px; }
   .row:hover { background: var(--panel-2); }
   .row.sel { background: #33231d; border-left-color: var(--gold); }
   .row.armed { background: #3a1e1e; border-left-color: var(--maroon-hi); }
@@ -147,6 +149,32 @@
   .modal .body p { margin: 0; color: var(--muted); font-size: 13px; }
   .modal footer { padding: 12px 16px 14px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
   .modal textarea { width: 100%; min-height: 280px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; resize: vertical; }
+
+  /* ---------- pin check (zoom-shift audit) ---------- */
+  #auditModal .modal { width: min(1180px, 100%); height: 100%; }
+  #auditModal .body { gap: 0; }
+  .audit-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 4px 0 10px; border-bottom: 1px solid var(--line); }
+  .audit-bar .sum { color: var(--muted); font-size: 13px; }
+  .arow { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .arow.done { opacity: .62; }
+  .arow-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 7px; }
+  .arow-h .nm { font-family: var(--serif); font-size: 16px; }
+  .arow-h .co { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .arow-h .st { font-size: 12px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .arow-h .st.wet { border-color: #3f6fb5; color: #9cc3ff; }
+  .arow-h .st.ok { border-color: #3d7a43; color: #9fdca4; }
+  .arow-h .sp { flex: 1; }
+  .thumbs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .thumb { flex: none; width: 170px; border: 2px solid var(--line); border-radius: 7px; overflow: hidden; background: #1e1e1e; position: relative; padding: 0; cursor: pointer; text-align: left; }
+  .thumb.cur { border-color: var(--gold); cursor: default; }
+  .thumb:not(.cur):hover { border-color: var(--easy); }
+  .thumb canvas { display: block; width: 166px; height: 118px; }
+  .thumb .cap { display: flex; justify-content: space-between; gap: 6px; padding: 3px 7px; font-size: 11px; color: var(--muted); background: var(--panel-2); }
+  .thumb .cap b { color: var(--text); font-weight: 600; }
+  .thumb .wet { color: #9cc3ff; }
+  .thumb .xh { position: absolute; left: 50%; top: 59px; width: 22px; height: 22px; margin: -11px 0 0 -11px; pointer-events: none;
+    background: linear-gradient(var(--gold), var(--gold)) center / 2px 100% no-repeat, linear-gradient(var(--gold), var(--gold)) center / 100% 2px no-repeat; opacity: .95; filter: drop-shadow(0 0 1px #000); }
+  .thumb .xh::after { content: ''; position: absolute; inset: 7px; border: 2px solid var(--gold); border-radius: 50%; }
   #addModal .modal { width: min(440px, 100%); }
   #loginModal .modal { width: min(420px, 100%); text-align: center; }
   #loginModal .body p { font-size: 14px; }
@@ -184,6 +212,7 @@
     <button class="btn" id="undoBtn" disabled>Undo</button>
     <button class="btn" id="importBtn">Import</button>
     <button class="btn gold" id="exportBtn">Export</button>
+    <button class="btn" id="auditBtn">Check pins for the zoom shift</button>
   </div>
   <div class="filters">
     <input class="search" id="q" type="search" placeholder="Search names and hints" autocomplete="off">
@@ -194,8 +223,10 @@
       <span class="shown" id="shown"></span>
     </div>
   </div>
-  <div id="editor"></div>
-  <div id="list"></div>
+  <div id="scroll">
+    <div id="editor"></div>
+    <div id="list"></div>
+  </div>
 </aside>
 
 <main id="mapwrap">
@@ -215,6 +246,22 @@
   <div class="float" id="readout"><span class="k">x</span> <span id="rx">—</span>&nbsp; <span class="k">z</span> <span id="rz">—</span></div>
   <div class="float" id="legend"></div>
 </main>
+
+<div class="modal-bg" id="auditModal"><div class="modal">
+  <header><h2>Check pins for the zoom shift</h2><button class="btn small" data-close>Close</button></header>
+  <div class="body">
+    <div class="audit-bar">
+      <p style="flex-basis:100%">Before the fix, a zoomed-out map was drawn too far north by 32, 96, 224, 480 or 992 blocks, depending on
+        the zoom. A pin placed there sits that far north of its real spot. Each row shows the pin as placed (gold border), then the spots
+        that far south. Click the tile that shows the right place to move the pin there, or <b>Looks right</b> to keep it. Undo works here too.
+        <b>In water?</b> means the pin's block looks like water, a quick hint rather than proof.</p>
+      <label class="toggle" id="auWetOnly"><input type="checkbox" style="display:none">Only pins in water</label>
+      <label class="toggle" id="auTodoOnly"><input type="checkbox" style="display:none">Hide checked</label>
+      <span class="sum" id="auSum"></span>
+    </div>
+    <div id="auList"></div>
+  </div>
+</div></div>
 
 <div class="modal-bg" id="exportModal"><div class="modal">
   <header><h2>Export locations.json</h2><button class="btn small" data-close>Close</button></header>
@@ -678,7 +725,7 @@
     }).join('') + '<span class="kinds">T town · B building · L landmark · N npc · • other</span>';
   }
 
-  function renderAll() { renderCounts(); renderFilters(); renderList(); renderEditor(); renderPins(); undoBtnState(); }
+  function renderAll() { renderCounts(); renderFilters(); renderList(); renderEditor(); renderPins(); undoBtnState(); renderAudit(); }
   function undoBtnState() {
     var b = document.getElementById('undoBtn'), u = undoStack[undoStack.length - 1];
     b.disabled = !u; b.title = u ? 'Undo ' + u.label + ' (Ctrl+Z)' : 'Nothing to undo';
@@ -865,6 +912,98 @@
     closeModal(importModal); disarm(true);
     commit('start over', function () { state.locations = seedLocations(); state.meta = JSON.parse(JSON.stringify(DEFAULT_META)); ui.selected = null; });
   };
+
+
+  /* ================= pin check: find pins placed on the old, north-shifted zoom levels ================= */
+  var SHIFTS = [32, 96, 224, 480, 992], AUDIT_KEY = 'pintland-placer-audit-v1', AZ = 4, TW = 166, TH = 118;
+  var auditModal = document.getElementById('auditModal'), auList = document.getElementById('auList');
+  var auditMarks = PT.store.get(AUDIT_KEY, {}), auWet = {}, auWetOnly = false, auTodoOnly = false, auToken = 0, imgCache = {};
+  function tileImg(url) {
+    if (!imgCache[url]) imgCache[url] = new Promise(function (res) {
+      var im = new Image(); im.onload = function () { res(im); }; im.onerror = function () { res(null); }; im.src = url;
+    });
+    return imgCache[url];
+  }
+  /* draw the map around block (x, z) at zoom AZ (2 px per block) into a canvas, then measure how watery the centre is */
+  function drawThumb(cv, x, z) {
+    var crs = map.options.crs, base = PT.tileBase(state.meta.world, state.meta.mapName || 'flat');
+    var c = crs.latLngToPoint(blockCenter(x, z), AZ), x0 = Math.round(c.x - TW / 2), y0 = Math.round(c.y - TH / 2);
+    var jobs = [];
+    for (var ty = Math.floor(y0 / 128); ty <= Math.floor((y0 + TH) / 128); ty++)
+      for (var tx = Math.floor(x0 / 128); tx <= Math.floor((x0 + TW) / 128); tx++)
+        (function (tx, ty) { jobs.push(tileImg(PT.tileUrl(base, { x: tx, y: ty, z: AZ })).then(function (im) { return { im: im, dx: tx * 128 - x0, dy: ty * 128 - y0 }; })); })(tx, ty);
+    return Promise.all(jobs).then(function (tiles) {
+      cv.width = TW; cv.height = TH;
+      var g = cv.getContext('2d'); g.fillStyle = '#1e1e1e'; g.fillRect(0, 0, TW, TH);
+      tiles.forEach(function (t) { if (t.im) g.drawImage(t.im, t.dx, t.dy); });
+      var d = g.getImageData(TW / 2 - 4, TH / 2 - 4, 9, 9).data, wet = 0;
+      for (var i = 0; i < d.length; i += 4) if (d[i + 2] > d[i] + 30 && d[i + 2] > d[i + 1] + 8) wet++;
+      return wet / 81;
+    });
+  }
+  function auditStatus(l) { var m = auditMarks[l.id]; return m && m.z === l.z && m.x === l.x ? m.s : null; }
+  function markAudit(l, s) { auditMarks[l.id] = { s: s, x: l.x, z: l.z }; PT.store.set(AUDIT_KEY, auditMarks); }
+
+  function renderAudit() {
+    if (!auditModal || !auditModal.classList.contains('show')) return;
+    var token = ++auToken, locs = state.locations.filter(placed), scroller = auList.parentNode, keep = scroller.scrollTop;
+    Promise.all(locs.map(function (l) {
+      return drawThumb(document.createElement('canvas'), l.x, l.z).then(function (w) { auWet[l.id] = w > 0.6; });
+    })).then(function () {
+      if (token !== auToken) return;
+      var rows = locs.slice().sort(function (a, b) { return (auWet[b.id] ? 1 : 0) - (auWet[a.id] ? 1 : 0); });
+      var nWet = rows.filter(function (l) { return auWet[l.id]; }).length, nDone = rows.filter(auditStatus).length;
+      document.getElementById('auSum').textContent = rows.length + ' pins · ' + nWet + ' in water · ' + nDone + ' checked';
+      rows = rows.filter(function (l) { return (!auWetOnly || auWet[l.id]) && (!auTodoOnly || !auditStatus(l)); });
+      auList.innerHTML = rows.length ? rows.map(function (l) {
+        var st = auditStatus(l);
+        return '<div class="arow' + (st ? ' done' : '') + '" data-id="' + esc(l.id) + '"><div class="arow-h">' +
+          '<span class="dot" style="background:' + COLOR[l.difficulty] + '"></span><span class="nm">' + esc(l.name) + '</span>' +
+          '<span class="co">' + fmt(l.x) + ', ' + fmt(l.z) + '</span>' +
+          (auWet[l.id] ? '<span class="st wet">In water?</span>' : '') + (st ? '<span class="st ok">' + esc(st) + '</span>' : '') +
+          '<span class="sp"></span><button class="btn small" data-au="show">Show on map</button>' +
+          '<button class="btn small" data-au="ok">' + (st === 'looks right' ? 'Checked ✓' : 'Looks right') + '</button></div>' +
+          '<div class="thumbs">' + [0].concat(SHIFTS).filter(function (s) { return l.z + s < state.play.z1; }).map(function (s) {
+            return '<button class="thumb' + (s ? '' : ' cur') + '" data-shift="' + s + '" title="' + (s ? 'Move ' + esc(l.name) + ' ' + s + ' blocks south, to ' + fmt(l.x) + ', ' + fmt(l.z + s) : 'Where the pin is now') + '">' +
+              '<canvas width="' + TW + '" height="' + TH + '"></canvas><span class="xh"></span>' +
+              '<span class="cap"><b>' + (s ? s + ' blocks south' : 'As placed') + '</b><span class="w"></span></span></button>';
+          }).join('') + '</div></div>';
+      }).join('') : '<div class="empty">' + (locs.length ? 'Nothing left to check with these filters.' : 'No placed pins yet.') + '</div>';
+      Array.prototype.forEach.call(auList.querySelectorAll('.arow'), function (row) {
+        var l = byId(row.dataset.id);
+        Array.prototype.forEach.call(row.querySelectorAll('.thumb'), function (t) {
+          drawThumb(t.querySelector('canvas'), l.x, l.z + Number(t.dataset.shift)).then(function (w) {
+            if (w > 0.6 && token === auToken) t.querySelector('.w').innerHTML = '<span class="wet">water?</span>';
+          });
+        });
+      });
+      scroller.scrollTop = keep;
+    });
+  }
+  auList.addEventListener('click', function (e) {
+    var row = e.target.closest('.arow'); if (!row) return;
+    var l = byId(row.dataset.id); if (!l) return;
+    var t = e.target.closest('.thumb'), b = e.target.closest('[data-au]');
+    if (t && Number(t.dataset.shift)) {
+      var s = Number(t.dataset.shift);
+      commit('move ' + l.name + ' ' + s + ' blocks south', function () { l.z += s; });
+      markAudit(l, 'moved ' + s + ' south'); renderAudit();
+      toast('Moved ' + l.name + ' to ' + fmt(l.x) + ', ' + fmt(l.z) + '. Undo puts it back.');
+    } else if (b && b.dataset.au === 'ok') {
+      if (auditStatus(l) === 'looks right') delete auditMarks[l.id]; else markAudit(l, 'looks right');
+      PT.store.set(AUDIT_KEY, auditMarks); renderAudit();
+    } else if (b && b.dataset.au === 'show') {
+      closeModal(auditModal); disarm(true);
+      ui.selected = l.id; map.setView(blockCenter(l.x, l.z), PT.NATIVE_ZOOM); renderAll();
+    }
+  });
+  function auToggle(id, set) {
+    var el = document.getElementById(id);
+    el.addEventListener('click', function (e) { e.preventDefault(); el.classList.toggle('on', set(!el.classList.contains('on'))); renderAudit(); });
+  }
+  auToggle('auWetOnly', function (v) { auWetOnly = v; return v; });
+  auToggle('auTodoOnly', function (v) { auTodoOnly = v; return v; });
+  document.getElementById('auditBtn').onclick = function () { closeDrawer(); openModal(auditModal); auList.innerHTML = '<div class="empty">Loading tiles…</div>'; renderAudit(); };
 
   /* ================= chrome ================= */
   function openModal(m) { m.classList.add('show'); }
