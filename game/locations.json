@@ -12,7 +12,7 @@
     }
   },
   "play": {"x0":-3500,"z0":-3500,"x1":3500,"z1":3500},
-  "wishlistBatch": 3,
+  "wishlistBatch": 4,
   "locations": [
     {"id":"aleforge","name":"Aleforge","kind":"town","difficulty":"easy","hint":"","x":966,"z":-19},
     {"id":"providence","name":"Providence","kind":"town","difficulty":"easy","hint":"","x":625,"z":-598},
@@ -162,6 +162,12 @@
     {"id":"bar-boosy","name":"Bar Boosy","kind":"building","difficulty":"hard","hint":"Tavern","note":"Your list: Aleforge (you think)."},
     {"id":"daori-gerrell","name":"Daori Gerrell","kind":"building","difficulty":"medium","hint":"Travel inn and brewery","note":"Your list: between Shanty Town and Providence."},
     {"id":"hermes-foot","name":"Hermes Foot","kind":"building","difficulty":"expert","hint":"Tavern","note":"Your list: no location given."},
-    {"id":"sapwell-tavern","name":"Sapwell Tavern","kind":"building","difficulty":"expert","hint":"Tavern","note":"Your list: no location given."}
+    {"id":"sapwell-tavern","name":"Sapwell Tavern","kind":"building","difficulty":"expert","hint":"Tavern","note":"Your list: no location given."},
+    {"id":"where-cheeks-was-smuggled-out","name":"Where Cheeks Was Smuggled Out","kind":"landmark","difficulty":"expert","hint":"","note":"Lore: implied, Aleforge's docks. Buke faked Cheeks' death and snuck him onto a Goldcoral boat to Providence."},
+    {"id":"where-cumsock-was-found","name":"Where CUMsock Was Found","kind":"other","difficulty":"expert","hint":"","note":"Lore: Aleforge's sewers, where JP found the goat wandering."},
+    {"id":"where-jp-found-the-bluechew","name":"Where JP Found the Bluechew","kind":"other","difficulty":"expert","hint":"","note":"Lore: not stated. Aleforge, day 3 (found with the Super Lube)."},
+    {"id":"where-maximilian-froze-the-kings","name":"Where Maximilian Froze the Kings","kind":"landmark","difficulty":"expert","hint":"","note":"Lore: not stated. The cryo-chambers at the fake 20th-anniversary party."},
+    {"id":"where-chicken-jockey-was-played","name":"Where Chicken Jockey Was Played","kind":"landmark","difficulty":"expert","hint":"","note":"Lore: Owe Block. The local game about shooting white animals."},
+    {"id":"the-cumsock-ransom-drop","name":"The CUMsock Ransom Drop","kind":"other","difficulty":"expert","hint":"","note":"Lore: not stated. Where JP had to deliver the full matching armour set to save CUMsock."}
   ]
 }

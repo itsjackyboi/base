@@ -470,8 +470,17 @@
     ['Sapwell Tavern', 'building', 'expert', 'Tavern', 'Your list: no location given.'],
     ["Yavern's Aelder", 'other', 'expert', '', 'Your list: no details given. Check the kind and difficulty.']
   ];
-  var BATCHES = [[2, SEED2], [3, SEED3]];
-  var WISHLIST_BATCH = 3;
+  // Wishlist batch 4: round-three lore picks, places where something happened.
+  var SEED4 = [
+    ['Where Cheeks Was Smuggled Out', 'landmark', 'expert', '', 'Lore: implied, Aleforge\'s docks. Buke faked Cheeks\' death and snuck him onto a Goldcoral boat to Providence.'],
+    ['Where CUMsock Was Found', 'other', 'expert', '', 'Lore: Aleforge\'s sewers, where JP found the goat wandering.'],
+    ['Where JP Found the Bluechew', 'other', 'expert', '', 'Lore: not stated. Aleforge, day 3 (found with the Super Lube).'],
+    ['Where Maximilian Froze the Kings', 'landmark', 'expert', '', 'Lore: not stated. The cryo-chambers at the fake 20th-anniversary party.'],
+    ['Where Chicken Jockey Was Played', 'landmark', 'expert', '', 'Lore: Owe Block. The local game about shooting white animals.'],
+    ['The CUMsock Ransom Drop', 'other', 'expert', '', 'Lore: not stated. Where JP had to deliver the full matching armour set to save CUMsock.']
+  ];
+  var BATCHES = [[2, SEED2], [3, SEED3], [4, SEED4]];
+  var WISHLIST_BATCH = 4;
 
   function slug(s) {
     return String(s).normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -485,7 +494,7 @@
   function seedRow(s) {
     return { id: slug(s[0]), name: s[0], kind: s[1], difficulty: s[2], hint: s[3] || '', note: s[4] || '', x: null, z: null, alt: [], seed: true };
   }
-  function seedLocations() { return SEED.concat(SEED2, SEED3).map(seedRow); }
+  function seedLocations() { return SEED.concat(SEED2, SEED3, SEED4).map(seedRow); }
   /* add wishlist batches newer than `from` that aren't in `locs` yet (by id), so new picks show up once in old drafts and files */
   function mergeNewBatches(locs, from) {
     var have = {}, n = 0;
@@ -497,7 +506,7 @@
     return n;
   }
   var SEED_IDS = {};
-  SEED.concat(SEED2, SEED3).forEach(function (s) { SEED_IDS[slug(s[0])] = 1; });
+  SEED.concat(SEED2, SEED3, SEED4).forEach(function (s) { SEED_IDS[slug(s[0])] = 1; });
 
   function normLoc(l, fallbackName) {
     var o = {

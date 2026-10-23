@@ -63,9 +63,9 @@ async function gotoXZ(page, txt) {
   await page.goto(BASE);
   await tilesLoaded(page);
   assert.strictEqual(await page.locator('#loginModal.show').count(), 0, 'no login card when /up/configuration is {}');
-  assert.strictEqual(await page.locator('#list .row').count(), 152, 'wishlist is seeded (71 + 58 + 23)');
+  assert.strictEqual(await page.locator('#list .row').count(), 158, 'wishlist is seeded (71 + 58 + 23 + 6)');
   await page.screenshot({ path: path.join(OUT, 'laptop-overview.png') });
-  step('loads, tiles render, wishlist seeded (152), no login card');
+  step('loads, tiles render, wishlist seeded (158), no login card');
 
   // whole box visible at start
   const fit = await page.evaluate(() => { const b = window.placer.map.getBounds(); return [b.getWest(), b.getEast(), -b.getNorth(), -b.getSouth()]; });
@@ -271,8 +271,8 @@ async function gotoXZ(page, txt) {
   assert.deepStrictEqual(data.play, { x0: -3500, z0: -3500, x1: 3500, z1: 3500 });
   assert.strictEqual(data.locations.length, 2);
   data.locations.forEach(l => assert.deepStrictEqual(Object.keys(l), ['id', 'name', 'kind', 'difficulty', 'hint', 'x', 'z']));
-  assert.strictEqual(data.unplaced.length, 151);
-  assert.strictEqual(data.wishlistBatch, 3);
+  assert.strictEqual(data.unplaced.length, 157);
+  assert.strictEqual(data.wishlistBatch, 4);
   assert(data.unplaced.find(l => l.id === 'liquor-king-cemetery' && /Plindor/.test(l.note)), 'batch 2 notes exported');
   const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#exDownload')]);
   assert.strictEqual(dl.suggestedFilename(), 'locations.json');
@@ -332,7 +332,7 @@ async function gotoXZ(page, txt) {
   await page.click('#importBtn');
   await page.fill('#imText', JSON.stringify({ locations: [{ name: 'Providence', kind: 'town', difficulty: 'easy', x: 1, z: 2 }] }));
   await page.click('#imGo');
-  assert.strictEqual(await page.evaluate(() => window.placer.state.locations.length), 152);
+  assert.strictEqual(await page.evaluate(() => window.placer.state.locations.length), 158);
   await page.click('#undoBtn');
   assert.strictEqual(await page.evaluate(() => window.placer.state.locations.filter(l => l.x !== null).length), 2);
   step('minimal import keeps the wishlist; undo reverts the import');
@@ -342,20 +342,21 @@ async function gotoXZ(page, txt) {
     locations: [{ id: 'providence', name: 'Providence', kind: 'town', difficulty: 'easy', x: 1, z: 2 }] })));
   await page.reload();
   await tilesLoaded(page);
-  assert.strictEqual(await page.evaluate(() => window.placer.state.locations.length), 82);
-  await page.waitForFunction(() => /81 new locations added/.test(document.getElementById('toast').textContent));
+  assert.strictEqual(await page.evaluate(() => window.placer.state.locations.length), 88);
+  await page.waitForFunction(() => /87 new locations added/.test(document.getElementById('toast').textContent));
   await page.waitForTimeout(700);
   await page.reload();
   await tilesLoaded(page);
-  assert.strictEqual(await page.evaluate(() => window.placer.state.locations.length), 82, 'merged only once');
-  // a draft already on batch 2 gets only batch 3
+  assert.strictEqual(await page.evaluate(() => window.placer.state.locations.length), 88, 'merged only once');
+  // a draft already on batch 2 gets batches 3 and 4
   await page.evaluate(() => localStorage.setItem('pintland-placer-draft-v1', JSON.stringify({ meta: {}, play: {}, wishlistBatch: 2,
     locations: [{ id: 'providence', name: 'Providence', kind: 'town', difficulty: 'easy', x: 1, z: 2 }] })));
   await page.reload();
   await tilesLoaded(page);
-  assert.strictEqual(await page.evaluate(() => window.placer.state.locations.length), 24);
+  assert.strictEqual(await page.evaluate(() => window.placer.state.locations.length), 30);
   assert(await loc(page, "The Hog's Hog"), 'batch 3 tavern added');
-  step('old drafts get the newer wishlist batches merged in once (batch 1 draft +81, batch 2 draft +23)');
+  assert(await loc(page, 'The CUMsock Ransom Drop'), 'batch 4 pick added');
+  step('old drafts get the newer wishlist batches merged in once (batch 1 draft +87, batch 2 draft +29)');
 
   // pin check: a pin placed 480 blocks north of its real spot (in the mock's ocean) is flagged, and the 480-south
   // tile moves it onto land; a correct pin isn't flagged
