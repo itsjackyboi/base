@@ -443,7 +443,35 @@
     ['Vlad the Kisser', 'npc', 'expert', 'A struggling comedian', 'Lore: the Theocrat, Providence.'],
     ['George Big Bush', 'npc', 'hard', 'Tavern owner', 'Lore: the Thorny Thicket, deep in the Brandywine Brush.']
   ];
-  var WISHLIST_BATCH = 2;
+
+  // Wishlist batch 3: round-two lore picks, plus taverns and places from Jack's own list (not in the lore docs).
+  var SEED3 = [
+    ['Aleforge Castle Courtyard', 'landmark', 'expert', '', 'Lore: the courtyard of Aleforge Castle, where the Dread Harrow appeared.'],
+    ["Rump's Blackmail Drop", 'other', 'expert', '', 'Lore: not stated. Where Rump hid 30 gold for Cheeks (Seamus pocketed it).'],
+    ['Where Cedric the Vicar Lost His Head', 'landmark', 'expert', '', "Lore: probably Aleforge's square, by the ale fountain."],
+    ['Aleforge International Academy for Aspiring Drinkers', 'building', 'medium', '', "Jagerbauhm's proposed school, by the Gilded Tankard."],
+    ["CUMsock's Zoo", 'building', 'hard', '', "JP's mayoral plan: a zoo for CUMsock."],
+    ['The Hidden Hallway to New Haven', 'landmark', 'easy', '', 'Lore: in the Cloister wall.'],
+    ["Saint No-Snooze's Barstool", 'landmark', 'expert', '', "Lore: inside Sackbeard's Tavern."],
+    ["The Circs' Hidden Vats", 'building', 'expert', '', 'Lore: hidden, in Providence.'],
+    ['Providence Police Department', 'building', 'expert', '', 'Lore: Providence.'],
+    ["Sexton Gobbler's Manor", 'building', 'expert', '', "Lore: Owe Block, above Bucket's Burgers."],
+    ['Presentation Room B', 'building', 'expert', '', 'Lore: Hoegaarden Library, second floor.'],
+    ["The Hog's Hog", 'building', 'expert', 'Tavern', 'Your list: in the sewers.'],
+    ['Beer Below', 'building', 'hard', 'Tavern', 'Your list: Owe Block.'],
+    ['8th Deadly Sin', 'building', 'expert', 'Tavern', 'Your list: the Wildlands.'],
+    ['Krackens Peen', 'building', 'expert', 'Tavern', 'Your list: the Wildlands.'],
+    ['The Alamo', 'building', 'hard', 'Tavern', 'Your list: Shanty Town (you weren\'t sure).'],
+    ['Yucky Yen', 'building', 'hard', 'Tavern', 'Your list: Roto Kaiishi.'],
+    ['Head Bar', 'building', 'hard', 'Tavern', 'Your list: Shanty Town.'],
+    ['Bar Boosy', 'building', 'hard', 'Tavern', 'Your list: Aleforge (you think).'],
+    ['Daori Gerrell', 'building', 'medium', 'Travel inn and brewery', 'Your list: between Shanty Town and Providence.'],
+    ['Hermes Foot', 'building', 'expert', 'Tavern', 'Your list: no location given.'],
+    ['Sapwell Tavern', 'building', 'expert', 'Tavern', 'Your list: no location given.'],
+    ["Yavern's Aelder", 'other', 'expert', '', 'Your list: no details given. Check the kind and difficulty.']
+  ];
+  var BATCHES = [[2, SEED2], [3, SEED3]];
+  var WISHLIST_BATCH = 3;
 
   function slug(s) {
     return String(s).normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -457,17 +485,19 @@
   function seedRow(s) {
     return { id: slug(s[0]), name: s[0], kind: s[1], difficulty: s[2], hint: s[3] || '', note: s[4] || '', x: null, z: null, alt: [], seed: true };
   }
-  function seedLocations() { return SEED.concat(SEED2).map(seedRow); }
+  function seedLocations() { return SEED.concat(SEED2, SEED3).map(seedRow); }
   /* add wishlist batches newer than `from` that aren't in `locs` yet (by id), so new picks show up once in old drafts and files */
   function mergeNewBatches(locs, from) {
-    if ((from || 1) >= 2) return 0;
     var have = {}, n = 0;
     locs.forEach(function (l) { have[l.id || slug(l.name)] = 1; });
-    SEED2.forEach(function (s) { if (!have[slug(s[0])]) { locs.push(seedRow(s)); n++; } });
+    BATCHES.forEach(function (b) {
+      if (b[0] <= (from || 1)) return;
+      b[1].forEach(function (s) { if (!have[slug(s[0])]) { locs.push(seedRow(s)); have[slug(s[0])] = 1; n++; } });
+    });
     return n;
   }
   var SEED_IDS = {};
-  SEED.concat(SEED2).forEach(function (s) { SEED_IDS[slug(s[0])] = 1; });
+  SEED.concat(SEED2, SEED3).forEach(function (s) { SEED_IDS[slug(s[0])] = 1; });
 
   function normLoc(l, fallbackName) {
     var o = {
@@ -501,7 +531,7 @@
       state.locations = d.locations.map(function (l) { return normLoc(l); }).filter(function (l) { return l.name; });
       fixIds();
       var added = mergeNewBatches(state.locations, d.wishlistBatch);
-      if (added) setTimeout(function () { toast(added + ' new wishlist locations added from your lore picks'); save(); }, 600);
+      if (added) setTimeout(function () { toast(added + ' new locations added to your wishlist'); save(); }, 600);
     } else {
       state.locations = seedLocations();
     }

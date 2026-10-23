@@ -12,7 +12,7 @@
     }
   },
   "play": {"x0":-3500,"z0":-3500,"x1":3500,"z1":3500},
-  "wishlistBatch": 2,
+  "wishlistBatch": 3,
   "locations": [
     {"id":"aleforge","name":"Aleforge","kind":"town","difficulty":"easy","hint":"","x":966,"z":-19},
     {"id":"providence","name":"Providence","kind":"town","difficulty":"easy","hint":"","x":625,"z":-598},
@@ -143,6 +143,29 @@
     {"id":"pope","name":"Pope","kind":"npc","difficulty":"expert","hint":"Ex-mafia cigar lover","note":"Lore: the Big Ole Pipe."},
     {"id":"hunk-the-monk","name":"Hunk the Monk","kind":"npc","difficulty":"hard","hint":"The Cardinal's bodyguard","note":"Lore: the streets around the Cardinal's towers, Providence."},
     {"id":"vlad-the-kisser","name":"Vlad the Kisser","kind":"npc","difficulty":"expert","hint":"A struggling comedian","note":"Lore: the Theocrat, Providence."},
-    {"id":"george-big-bush","name":"George Big Bush","kind":"npc","difficulty":"hard","hint":"Tavern owner","note":"Lore: the Thorny Thicket, deep in the Brandywine Brush."}
+    {"id":"george-big-bush","name":"George Big Bush","kind":"npc","difficulty":"hard","hint":"Tavern owner","note":"Lore: the Thorny Thicket, deep in the Brandywine Brush."},
+    {"id":"aleforge-castle-courtyard","name":"Aleforge Castle Courtyard","kind":"landmark","difficulty":"expert","hint":"","note":"Lore: the courtyard of Aleforge Castle, where the Dread Harrow appeared."},
+    {"id":"rumps-blackmail-drop","name":"Rump's Blackmail Drop","kind":"other","difficulty":"expert","hint":"","note":"Lore: not stated. Where Rump hid 30 gold for Cheeks (Seamus pocketed it)."},
+    {"id":"where-cedric-the-vicar-lost-his-head","name":"Where Cedric the Vicar Lost His Head","kind":"landmark","difficulty":"expert","hint":"","note":"Lore: probably Aleforge's square, by the ale fountain."},
+    {"id":"aleforge-international-academy-for-aspiring-drinkers","name":"Aleforge International Academy for Aspiring Drinkers","kind":"building","difficulty":"medium","hint":"","note":"Jagerbauhm's proposed school, by the Gilded Tankard."},
+    {"id":"cumsocks-zoo","name":"CUMsock's Zoo","kind":"building","difficulty":"hard","hint":"","note":"JP's mayoral plan: a zoo for CUMsock."},
+    {"id":"the-hidden-hallway-to-new-haven","name":"The Hidden Hallway to New Haven","kind":"landmark","difficulty":"easy","hint":"","note":"Lore: in the Cloister wall."},
+    {"id":"saint-no-snoozes-barstool","name":"Saint No-Snooze's Barstool","kind":"landmark","difficulty":"expert","hint":"","note":"Lore: inside Sackbeard's Tavern."},
+    {"id":"the-circs-hidden-vats","name":"The Circs' Hidden Vats","kind":"building","difficulty":"expert","hint":"","note":"Lore: hidden, in Providence."},
+    {"id":"providence-police-department","name":"Providence Police Department","kind":"building","difficulty":"expert","hint":"","note":"Lore: Providence."},
+    {"id":"sexton-gobblers-manor","name":"Sexton Gobbler's Manor","kind":"building","difficulty":"expert","hint":"","note":"Lore: Owe Block, above Bucket's Burgers."},
+    {"id":"presentation-room-b","name":"Presentation Room B","kind":"building","difficulty":"expert","hint":"","note":"Lore: Hoegaarden Library, second floor."},
+    {"id":"the-hogs-hog","name":"The Hog's Hog","kind":"building","difficulty":"expert","hint":"Tavern","note":"Your list: in the sewers."},
+    {"id":"beer-below","name":"Beer Below","kind":"building","difficulty":"hard","hint":"Tavern","note":"Your list: Owe Block."},
+    {"id":"8th-deadly-sin","name":"8th Deadly Sin","kind":"building","difficulty":"expert","hint":"Tavern","note":"Your list: the Wildlands."},
+    {"id":"krackens-peen","name":"Krackens Peen","kind":"building","difficulty":"expert","hint":"Tavern","note":"Your list: the Wildlands."},
+    {"id":"the-alamo","name":"The Alamo","kind":"building","difficulty":"hard","hint":"Tavern","note":"Your list: Shanty Town (you weren't sure)."},
+    {"id":"yucky-yen","name":"Yucky Yen","kind":"building","difficulty":"hard","hint":"Tavern","note":"Your list: Roto Kaiishi."},
+    {"id":"head-bar","name":"Head Bar","kind":"building","difficulty":"hard","hint":"Tavern","note":"Your list: Shanty Town."},
+    {"id":"bar-boosy","name":"Bar Boosy","kind":"building","difficulty":"hard","hint":"Tavern","note":"Your list: Aleforge (you think)."},
+    {"id":"daori-gerrell","name":"Daori Gerrell","kind":"building","difficulty":"medium","hint":"Travel inn and brewery","note":"Your list: between Shanty Town and Providence."},
+    {"id":"hermes-foot","name":"Hermes Foot","kind":"building","difficulty":"expert","hint":"Tavern","note":"Your list: no location given."},
+    {"id":"sapwell-tavern","name":"Sapwell Tavern","kind":"building","difficulty":"expert","hint":"Tavern","note":"Your list: no location given."},
+    {"id":"yaverns-aelder","name":"Yavern's Aelder","kind":"other","difficulty":"expert","hint":"","note":"Your list: no details given. Check the kind and difficulty."}
   ]
 }
