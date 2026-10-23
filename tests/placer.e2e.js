@@ -266,7 +266,7 @@ async function gotoXZ(page, txt) {
   const exported = await page.inputValue('#exportText');
   const data = JSON.parse(exported);
   assert.strictEqual(data.meta.world, "Jack's Long Island Iced Tea (World 1)-2");
-  assert.deepStrictEqual(data.meta.mix, ['easy', 'medium', 'medium', 'hard', 'expert']);
+  assert.deepStrictEqual(data.meta.mix, ['medium', 'hard', 'hard', 'expert', 'expert']);
   assert.deepStrictEqual(data.meta.scoring, { k: 200, perfect: 0 });
   assert.deepStrictEqual(data.play, { x0: -3500, z0: -3500, x1: 3500, z1: 3500 });
   assert.strictEqual(data.locations.length, 2);

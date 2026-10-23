@@ -47,7 +47,7 @@
 
   function init(d) {
     data = d;
-    meta = Object.assign({ tz: 'America/New_York', epoch: '2026-10-24', mix: ['easy', 'medium', 'medium', 'hard', 'expert'],
+    meta = Object.assign({ tz: 'America/New_York', epoch: '2026-10-24', mix: PT.DEFAULT_MIX,
       scoring: { k: 200, perfect: 0 }, world: "Jack's Long Island Iced Tea (World 1)-2", mapName: 'flat' }, d.meta || {});
     meta.scoring = Object.assign({ k: 200, perfect: 0 }, meta.scoring || {});
     play = d.play || { x0: -3500, z0: -3500, x1: 3500, z1: 3500 };

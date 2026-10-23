@@ -67,7 +67,7 @@ async function playRound(page, dx, dz, opts) {
   await tilesLoaded(page);
   await page.screenshot({ path: path.join(OUT, 'game-start.png') });
   let p = await prog(page);
-  assert.deepStrictEqual(p.locs.map(l => l.difficulty), ['easy', 'medium', 'medium', 'hard', 'expert']);
+  assert.deepStrictEqual(p.locs.map(l => l.difficulty), ['medium', 'hard', 'hard', 'expert', 'expert']);
   p.locs.forEach(l => {
     const src = DATA.locations.find(d => d.id === l.id);
     assert(src && src.x === l.x && src.z === l.z, 'picked from locations.json: ' + l.id);
@@ -229,7 +229,7 @@ async function playRound(page, dx, dz, opts) {
     const g = await prog(page);
     assert.strictEqual(g.attempt, game);
     assert.strictEqual(g.rounds.length, 0);
-    assert.deepStrictEqual(g.locs.map(l => l.difficulty), ['easy', 'medium', 'medium', 'hard', 'expert']);
+    assert.deepStrictEqual(g.locs.map(l => l.difficulty), ['medium', 'hard', 'hard', 'expert', 'expert']);
     if (game === 2) {
       const overlap = g.locs.filter(l => seen.has(l.id)).length;
       assert.strictEqual(overlap, 0, 'game 2 avoids game 1 locations');

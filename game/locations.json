@@ -5,7 +5,7 @@
     "mapName": "flat",
     "tz": "America/New_York",
     "epoch": "2026-10-24",
-    "mix": ["easy", "medium", "medium", "hard", "expert"],
+    "mix": ["medium", "hard", "hard", "expert", "expert"],
     "scoring": {
       "k": 200,
       "perfect": 0

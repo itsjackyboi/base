@@ -336,7 +336,7 @@
     title: 'Pintland Tap',
     world: "Jack's Long Island Iced Tea (World 1)-2", mapName: 'flat',
     tz: 'America/New_York', epoch: '2026-10-24',
-    mix: ['easy', 'medium', 'medium', 'hard', 'expert'],
+    mix: ['medium', 'hard', 'hard', 'expert', 'expert'],
     scoring: { k: 200, perfect: 0 }
   };
   var DEFAULT_PLAY = { x0: -3500, z0: -3500, x1: 3500, z1: 3500 };
@@ -527,6 +527,7 @@
       state.meta = Object.assign({}, DEFAULT_META, d.meta || {});
       var sc = state.meta.scoring;   // drafts from before the scoring change had perfect: 5
       if (sc && sc.k === 200 && sc.perfect === 5) state.meta.scoring = { k: 200, perfect: 0 };
+      if (String(state.meta.mix) === 'easy,medium,medium,hard,expert') state.meta.mix = DEFAULT_META.mix.slice();   // old default: favour harder rounds
       state.play = Object.assign({}, DEFAULT_PLAY, d.play || {});
       state.locations = d.locations.map(function (l) { return normLoc(l); }).filter(function (l) { return l.name; });
       fixIds();

@@ -111,26 +111,44 @@
     return a;
   }
   /* Walks through a freshly shuffled copy of the pool each "cycle", so nothing repeats until the pool is used up. */
-  function bagPick(items, n, dayIdx, seedBase) {
+  /* The whole pool in today's order: today's slot of this cycle's shuffle first, then the rest of the cycle. */
+  function bagOrder(items, n, dayIdx, seedBase) {
     if (items.length <= n) return items.slice();
     var per = Math.floor(items.length / n), cycle = Math.floor(dayIdx / per), slot = dayIdx % per;
     var order = shuffled(items, mulberry32(seedBase + cycle * 7919));
-    return order.slice(slot * n, slot * n + n);
+    return order.slice(slot * n).concat(order.slice(0, slot * n));
+  }
+  function bagPick(items, n, dayIdx, seedBase) { return bagOrder(items, n, dayIdx, seedBase).slice(0, n); }
+  /* Closest distance between any spot of a and any spot of b. */
+  function gapBetween(a, b) {
+    var best = Infinity;
+    spots(a).forEach(function (p) { spots(b).forEach(function (q) { best = Math.min(best, dist(p, q)); }); });
+    return best;
   }
   var DIFFS = ['easy', 'medium', 'hard', 'expert'];
-  /* Daily rounds by difficulty mix (data.meta.mix, default 1 easy, 2 medium, 1 hard, 1 expert), easiest first. */
+  var DEFAULT_MIX = ['medium', 'hard', 'hard', 'expert', 'expert'];
+  var MIN_GAP = 50;   // blocks: two picks on the same day are never closer than this, so one can't give the other away
+  /* Daily rounds by difficulty mix (data.meta.mix, default 1 medium, 2 hard, 2 expert), easiest first. */
   function pickDaily(data, puzzleNo) {
-    var mix = (data.meta && data.meta.mix) || ['easy', 'medium', 'medium', 'hard', 'expert'];
+    var mix = (data.meta && data.meta.mix) || DEFAULT_MIX;
+    var gap = data.meta && data.meta.minGap != null ? data.meta.minGap : MIN_GAP;
     var day = puzzleNo - 1, want = {}, picks = [], have = {};
+    function clear(l) { return picks.every(function (p) { return gapBetween(p, l) >= gap; }); }
+    function take(seq, n) {   // first n of seq that keep their distance; if too few do, fill up from the rest in order
+      var got = seq.filter(function (l) { return !have[l.id]; }).filter(function (l) {
+        if (n > 0 && clear(l)) { picks.push(l); have[l.id] = 1; n--; return false; }
+        return true;
+      });
+      got.slice(0, n).forEach(function (l) { picks.push(l); have[l.id] = 1; });
+    }
     mix.forEach(function (d) { want[d] = (want[d] || 0) + 1; });
     DIFFS.forEach(function (d, i) {
       if (!want[d]) return;
       var pool = data.locations.filter(function (l) { return l.difficulty === d; });
-      bagPick(pool, want[d], day, 101 + i * 53).forEach(function (l) { picks.push(l); have[l.id] = 1; });
+      take(bagOrder(pool, want[d], day, 101 + i * 53), Math.min(want[d], pool.length));
     });
     if (picks.length < mix.length) {                           // a difficulty pool ran short: top up from anything left
-      var rest = shuffled(data.locations.filter(function (l) { return !have[l.id]; }), mulberry32(303 + day));
-      picks = picks.concat(rest.slice(0, mix.length - picks.length));
+      take(shuffled(data.locations.filter(function (l) { return !have[l.id]; }), mulberry32(303 + day)), mix.length - picks.length);
     }
     return picks.map(function (p, i) { return { p: p, i: i }; })
       .sort(function (a, b) { return (DIFFS.indexOf(a.p.difficulty) - DIFFS.indexOf(b.p.difficulty)) || (a.i - b.i); })
@@ -161,8 +179,8 @@
     NATIVE_ZOOM: NATIVE_ZOOM, MIN_ZOOM: MIN_ZOOM, MAX_ZOOM: MAX_ZOOM,
     makeCRS: makeCRS, toLL: toLL, fromLL: fromLL, boxToBounds: boxToBounds, dist: dist, spots: spots, nearest: nearest,
     tileBase: tileBase, tileUrl: tileUrl, makeTileLayer: makeTileLayer, makeMap: makeMap, lockTo: lockTo,
-    DIFFS: DIFFS, score: score, verdict: verdict, tile: tile,
-    mulberry32: mulberry32, shuffled: shuffled, bagPick: bagPick, pickDaily: pickDaily,
+    DIFFS: DIFFS, DEFAULT_MIX: DEFAULT_MIX, MIN_GAP: MIN_GAP, gapBetween: gapBetween, score: score, verdict: verdict, tile: tile,
+    mulberry32: mulberry32, shuffled: shuffled, bagOrder: bagOrder, bagPick: bagPick, pickDaily: pickDaily,
     ymd: ymd, puzzleNumber: puzzleNumber, secondsToNext: secondsToNext, store: store
   };
 })(typeof window !== 'undefined' ? window : globalThis);

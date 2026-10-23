@@ -35,7 +35,9 @@ their five; everyone else gets picks from the new file, so upload changes just a
   midnight in `meta.tz` (America/New_York). Days before the epoch play as an unnumbered "Preview" with
   unlimited games: **Play again** on the results draws five new locations, and preview games don't count
   toward stats. To get the preview back for more testing, move `meta.epoch` later in `locations.json`.
-- Five rounds following `meta.mix`, easiest first. Picks don't repeat until a difficulty's pool is used up.
+- Five rounds following `meta.mix`, easiest first: 1 medium, 2 hard, 2 expert (the players know the map, so easy
+  locations sit out). Picks don't repeat until a difficulty's pool is used up, and no two picks on the same day
+  are within 50 blocks of each other (`meta.minGap`), so a building and its NPC never give each other away.
 - Guesses snap to whole blocks. Score = 100 for the exact block (`perfect: 0`), otherwise
   `round(100 · e^(−d/k))` capped at 99, with `k = 200`: 25 off → 88, 100 → 61, 200 → 37, 500 → 8.
 - Each locked guess is saved to `localStorage` immediately; reloading can't re-guess. A finished day
