@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pintland Tap · Placer</title>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<style>
+  :root {
+    --maroon: #7B1C1C; --maroon-hi: #9a2a2a; --gold: #C9A84C; --gold-dim: #8f7838;
+    --bg: #17120f; --panel: #211915; --panel-2: #2a201b; --line: #3b2e26;
+    --text: #efe6d6; --muted: #a8998a; --faint: #6f6257;
+    --easy: #62b86a; --medium: #4f9fe0; --hard: #ec8f3a; --expert: #b67be6;
+    --serif: "Palatino Linotype", Palatino, "Book Antiqua", "URW Palladio L", P052, Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --side: 360px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.4 var(--sans); }
+  body { display: flex; height: 100vh; height: 100dvh; overflow: hidden; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: normal; margin: 0; }
+
+  /* ---------- sidebar ---------- */
+  #side { width: var(--side); flex: none; display: flex; flex-direction: column; background: var(--panel);
+    border-right: 1px solid var(--line); min-height: 0; padding-left: env(safe-area-inset-left); }
+  .side-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: baseline; gap: 8px; }
+  .brand h1 { font-size: 21px; color: var(--gold); letter-spacing: .3px; }
+  .brand span { color: var(--muted); font-family: var(--serif); font-style: italic; }
+  .drawer-close { display: none; margin-left: auto; }
+  .counts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; }
+  .count { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; }
+  .count .lbl { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .count .num { font-size: 15px; font-variant-numeric: tabular-nums; }
+  .count .num small { color: var(--faint); font-size: 11px; }
+  .count.low .num { color: #f0b37a; }
+  .count-note { margin-top: 6px; font-size: 11px; color: var(--faint); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; display: inline-block; }
+
+  .actions { display: flex; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  .btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; white-space: nowrap; }
+  .btn:hover:not(:disabled) { border-color: var(--gold-dim); }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.primary { background: var(--maroon); border-color: var(--maroon-hi); color: #fff; font-weight: 600; }
+  .btn.primary:hover:not(:disabled) { background: var(--maroon-hi); border-color: var(--gold); }
+  .btn.gold { background: var(--gold); border-color: var(--gold); color: #1d150f; font-weight: 600; }
+  .btn.danger:hover:not(:disabled) { border-color: #c44; color: #ffb3b3; }
+  .btn.small { padding: 3px 8px; font-size: 12px; }
+  #addBtn { flex: 1; }
+
+  .filters { padding: 10px 16px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 7px; }
+  .search { width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; }
+  .search:focus, .field input:focus, .field select:focus, textarea:focus, .goto input:focus { outline: none; border-color: var(--gold-dim); }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 2px 9px; font-size: 12px; cursor: pointer; color: var(--muted); display: inline-flex; align-items: center; gap: 5px; }
+  .chip.on { background: var(--panel-2); color: var(--text); border-color: var(--gold-dim); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { background: transparent; border: 0; padding: 3px 10px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button.on { background: var(--panel-2); color: var(--text); }
+  .filter-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .filter-row .shown { font-size: 12px; color: var(--faint); }
+  .linkish { background: none; border: 0; padding: 0; color: var(--gold); cursor: pointer; font-size: 12px; }
+
+  #editor { padding: 12px 16px; border-bottom: 1px solid var(--line); background: #2b1d19; display: none; }
+  #editor.show { display: block; }
+  #editor h3 { font-size: 16px; color: var(--gold); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  #editor h3 .tag { font-family: var(--sans); font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; }
+  .field { display: flex; flex-direction: column; gap: 2px; }
+  .field.wide { grid-column: 1 / -1; }
+  .field label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .field input, .field select { background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 5px 7px; width: 100%; min-width: 0; }
+  .ed-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .ed-actions .spacer { flex: 1; }
+
+  #list { flex: 1; overflow-y: auto; min-height: 0; padding: 4px 0 calc(12px + env(safe-area-inset-bottom)); }
+  .group-h { position: sticky; top: 0; background: var(--panel); padding: 8px 16px 4px; font-family: var(--serif); color: var(--gold); font-size: 13px; letter-spacing: .4px; display: flex; align-items: center; gap: 6px; z-index: 1; }
+  .group-h small { color: var(--faint); font-family: var(--sans); }
+  .row { display: flex; align-items: center; gap: 8px; padding: 6px 16px; cursor: pointer; border-left: 3px solid transparent; }
+  .row:hover { background: var(--panel-2); }
+  .row.sel { background: #33231d; border-left-color: var(--gold); }
+  .row.armed { background: #3a1e1e; border-left-color: var(--maroon-hi); }
+  .row .st { width: 18px; text-align: center; flex: none; color: var(--faint); }
+  .row .st.ok { color: var(--easy); font-weight: 700; }
+  .row .main { flex: 1; min-width: 0; }
+  .row .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .sub { font-size: 11px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row select { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; font-size: 12px; padding: 1px 2px; flex: none; }
+  .row .mv { flex: none; }
+  .empty { padding: 20px 16px; color: var(--faint); text-align: center; }
+
+  /* ---------- map ---------- */
+  #mapwrap { flex: 1; position: relative; min-width: 0; }
+  #map { position: absolute; inset: 0; background: #1e1e1e; }
+  .leaflet-container { background: #1e1e1e; font: 12px/1.3 var(--sans); }
+  .leaflet-tile { outline: 1px solid transparent; }
+  #map.crisp .leaflet-tile { image-rendering: pixelated; }
+  #map.armed, #map.armed .leaflet-grab, #map.armed .leaflet-interactive { cursor: crosshair; }
+  .leaflet-bar { border: 1px solid var(--line) !important; box-shadow: 0 2px 8px rgba(0,0,0,.4) !important; }
+  .leaflet-bar a { background: var(--panel) !important; color: var(--text) !important; border-bottom-color: var(--line) !important; width: 34px !important; height: 34px !important; line-height: 34px !important; font-size: 20px !important; }
+  .leaflet-bar a:hover { background: var(--panel-2) !important; color: var(--gold) !important; }
+  .leaflet-bottom.leaflet-right { bottom: env(safe-area-inset-bottom); right: env(safe-area-inset-right); }
+  .leaflet-tooltip.pin-tip { background: rgba(23,18,15,.92); color: var(--text); border: 1px solid var(--line); box-shadow: none; padding: 2px 6px; font-size: 12px; }
+  .leaflet-tooltip.pin-tip::before { display: none; }
+
+  .float { position: absolute; z-index: 800; background: rgba(33,25,21,.94); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,.45); }
+  #tools { top: calc(10px + env(safe-area-inset-top)); left: 10px; padding: 6px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; max-width: calc(100% - 20px); }
+  .goto { display: flex; gap: 4px; }
+  .goto input { width: 130px; background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 4px 7px; }
+  .toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); padding: 4px 8px; border-radius: 5px; border: 1px solid var(--line); cursor: pointer; user-select: none; background: transparent; }
+  .toggle.on { color: var(--text); border-color: var(--gold-dim); background: var(--panel-2); }
+  #readout { bottom: calc(10px + env(safe-area-inset-bottom)); left: 10px; padding: 5px 10px; font: 13px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; pointer-events: none; }
+  #readout .k { color: var(--faint); }
+  #readout .out { color: #f0b37a; }
+  #legend { bottom: calc(10px + env(safe-area-inset-bottom)); right: calc(56px + env(safe-area-inset-right)); padding: 6px 10px; font-size: 12px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  #legend span { display: inline-flex; align-items: center; gap: 5px; }
+  #legend .kinds { color: var(--faint); }
+  #armbar { top: calc(10px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); padding: 8px 10px 8px 14px; display: none; align-items: center; gap: 10px; border-color: var(--maroon-hi); background: rgba(70,22,22,.96); max-width: calc(100% - 20px); }
+  #armbar.show { display: flex; }
+  #armbar b { color: var(--gold); font-weight: 600; }
+  #drawerBtn { display: none; }
+
+  #gridlabels { position: absolute; inset: 0; pointer-events: none; z-index: 450; overflow: hidden; }
+  #gridlabels div { position: absolute; font-size: 10px; color: rgba(255,255,255,.72); text-shadow: 0 0 3px #000, 0 0 2px #000; white-space: nowrap; }
+  .corner-lbl { color: var(--gold); font-size: 11px; font-weight: 600; text-shadow: 0 0 3px #000, 0 0 3px #000; white-space: nowrap; }
+  .corner-lbl div { position: absolute; }
+
+  .pin { width: 24px; height: 32px; }
+  .pin .in { width: 24px; height: 32px; transform-origin: 12px 31px; transition: transform .12s; }
+  .pin svg { display: block; overflow: visible; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+  .pin.sel .in { transform: scale(1.3); }
+  .pin.sel path { stroke: var(--gold); stroke-width: 2.4; }
+  .goto-ping { width: 26px; height: 26px; border: 2px solid var(--gold); border-radius: 50%; animation: ping 1.2s ease-out infinite; }
+  @keyframes ping { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+
+  /* ---------- modals / toast ---------- */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .modal-bg.show { display: flex; }
+  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; width: min(640px, 100%); max-height: 100%; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+  .modal header { padding: 14px 16px 6px; display: flex; align-items: center; }
+  .modal header h2 { font-size: 19px; color: var(--gold); flex: 1; }
+  .modal .body { padding: 6px 16px; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+  .modal .body p { margin: 0; color: var(--muted); font-size: 13px; }
+  .modal footer { padding: 12px 16px 14px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .modal textarea { width: 100%; min-height: 280px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; resize: vertical; }
+  #addModal .modal { width: min(440px, 100%); }
+  #loginModal .modal { width: min(420px, 100%); text-align: center; }
+  #loginModal .body p { font-size: 14px; }
+  #toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px); background: var(--panel-2); border: 1px solid var(--gold-dim); border-radius: 8px; padding: 8px 14px; z-index: 3000; opacity: 0; transition: .2s; pointer-events: none; max-width: calc(100% - 32px); }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ---------- phone ---------- */
+  @media (max-width: 760px) {
+    #side { position: fixed; left: 0; right: 0; bottom: 0; width: auto; height: 72vh; height: 72dvh; z-index: 1500; border-right: 0; border-top: 1px solid var(--gold-dim);
+      border-radius: 14px 14px 0 0; transform: translateY(105%); transition: transform .22s ease; box-shadow: 0 -8px 30px rgba(0,0,0,.6); padding-right: env(safe-area-inset-right); }
+    body.drawer #side { transform: none; }
+    .drawer-close { display: inline-block; }
+    #drawerBtn { display: inline-block; }
+    .goto input { width: 92px; }
+    #tools { flex-wrap: nowrap; gap: 4px; padding: 5px; }
+    #tools .lbl { display: none; }
+    #legend { display: none; }
+    #readout { bottom: calc(56px + env(safe-area-inset-bottom)); }
+    #tools .btn, #tools .toggle { padding: 5px 8px; }
+    #armbar { top: auto; bottom: calc(96px + env(safe-area-inset-bottom)); }
+  }
+</style>
+</head>
+<body>
+
+<aside id="side">
+  <div class="side-head">
+    <div class="brand"><h1>Pintland Tap</h1><span>location placer</span>
+      <button class="btn small drawer-close" id="drawerClose">Map</button></div>
+    <div class="counts" id="counts"></div>
+    <div class="count-note">Placed / total per difficulty. The daily game wants 8+ placed of each.</div>
+  </div>
+  <div class="actions">
+    <button class="btn primary" id="addBtn">+ Add location</button>
+    <button class="btn" id="undoBtn" disabled>Undo</button>
+    <button class="btn" id="importBtn">Import</button>
+    <button class="btn gold" id="exportBtn">Export</button>
+  </div>
+  <div class="filters">
+    <input class="search" id="q" type="search" placeholder="Search names and hints" autocomplete="off">
+    <div class="chips" id="fDiff"></div>
+    <div class="chips" id="fKind"></div>
+    <div class="filter-row">
+      <div class="seg" id="fStatus"><button data-v="all">All</button><button data-v="placed">Placed</button><button data-v="unplaced">Unplaced</button></div>
+      <span class="shown" id="shown"></span>
+    </div>
+  </div>
+  <div id="editor"></div>
+  <div id="list"></div>
+</aside>
+
+<main id="mapwrap">
+  <div id="map"></div>
+  <div id="gridlabels"></div>
+  <div class="float" id="tools">
+    <button class="btn" id="drawerBtn">☰ List</button>
+    <form class="goto" id="gotoForm" autocomplete="off">
+      <input id="gotoIn" placeholder="go to x, z" inputmode="text" aria-label="Go to x, z">
+      <button class="btn" type="submit">Go</button>
+    </form>
+    <button class="toggle" id="gridT" type="button" title="500-block grid">▦<span class="lbl"> Grid</span></button>
+    <button class="toggle" id="namesT" type="button" title="Always show names">Aa<span class="lbl"> Names</span></button>
+    <button class="toggle" id="fitT" type="button" title="Zoom to the whole play area">⤢<span class="lbl"> Whole map</span></button>
+  </div>
+  <div class="float" id="armbar"><span>Click the map to place <b id="armName"></b></span><button class="btn small" id="armCancel">Cancel</button></div>
+  <div class="float" id="readout"><span class="k">x</span> <span id="rx">—</span>&nbsp; <span class="k">z</span> <span id="rz">—</span></div>
+  <div class="float" id="legend"></div>
+</main>
+
+<div class="modal-bg" id="exportModal"><div class="modal">
+  <header><h2>Export locations.json</h2><button class="btn small" data-close>Close</button></header>
+  <div class="body">
+    <p id="exportInfo"></p>
+    <textarea id="exportText" readonly spellcheck="false"></textarea>
+  </div>
+  <footer>
+    <button class="btn" id="exSelect">Select all</button>
+    <button class="btn" id="exCopy">Copy</button>
+    <button class="btn gold" id="exDownload">Download locations.json</button>
+  </footer>
+</div></div>
+
+<div class="modal-bg" id="importModal"><div class="modal">
+  <header><h2>Import JSON</h2><button class="btn small" data-close>Close</button></header>
+  <div class="body">
+    <p>Paste an exported <code>locations.json</code> or choose the file. This replaces the current draft (you can undo it).</p>
+    <input type="file" id="imFile" accept=".json,application/json">
+    <textarea id="imText" spellcheck="false" placeholder='{ "meta": …, "play": …, "locations": [ … ] }'></textarea>
+  </div>
+  <footer>
+    <button class="btn danger" id="imReset">Start over from wishlist</button>
+    <span style="flex:1"></span>
+    <button class="btn gold" id="imGo">Import</button>
+  </footer>
+</div></div>
+
+<div class="modal-bg" id="addModal"><div class="modal">
+  <header><h2>Add location</h2><button class="btn small" data-close>Close</button></header>
+  <form class="body" id="addForm" autocomplete="off">
+    <div class="grid2">
+      <div class="field wide"><label for="adName">Name</label><input id="adName" required placeholder="e.g. Old Salty's rowboat"></div>
+      <div class="field"><label for="adKind">Kind</label><select id="adKind"></select></div>
+      <div class="field"><label for="adDiff">Difficulty</label><select id="adDiff"></select></div>
+      <div class="field wide"><label for="adHint">Hint (optional)</label><input id="adHint" placeholder="Shown under the name in the game"></div>
+    </div>
+    <p>Next, click the map where it is. For an NPC, click where they stand.</p>
+    <footer style="padding:8px 0 4px"><button class="btn primary" type="submit">Place on map</button></footer>
+  </form>
+</div></div>
+
+<div class="modal-bg" id="loginModal"><div class="modal">
+  <header><h2>Log in to Dynmap first</h2></header>
+  <div class="body"><p>The map tiles come from the Pintland Dynmap, which needs you to be logged in. Log in, then come back to this page.</p></div>
+  <footer style="justify-content:center"><a class="btn gold" href="/login.html" style="text-decoration:none">Open Dynmap login</a>
+    <button class="btn" data-close>Continue anyway</button></footer>
+</div></div>
+
+<div id="toast"></div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="js/core.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ================= data ================= */
+  var DRAFT_KEY = 'pintland-placer-draft-v1', UI_KEY = 'pintland-placer-ui-v1';
+  var KINDS = ['town', 'building', 'landmark', 'npc', 'other'];
+  var DIFFS = PT.DIFFS;
+  var GLYPH = { town: 'T', building: 'B', landmark: 'L', npc: 'N', other: '•' };
+  var COLOR = { easy: '#62b86a', medium: '#4f9fe0', hard: '#ec8f3a', expert: '#b67be6' };
+  var TARGET = 8;
+  var DEFAULT_META = {
+    title: 'Pintland Tap',
+    world: "Jack's Long Island Iced Tea (World 1)-2", mapName: 'flat',
+    tz: 'America/New_York', epoch: '2026-10-24',
+    mix: ['easy', 'medium', 'medium', 'hard', 'expert'],
+    scoring: { k: 200, perfect: 5 }
+  };
+  var DEFAULT_PLAY = { x0: -3500, z0: -3500, x1: 3500, z1: 3500 };
+
+  // Wishlist from the Master Lore Compendium: [name, kind, difficulty, hint]
+  var SEED = [
+    ['Aleforge', 'town', 'easy'], ['Providence', 'town', 'easy'], ['Shanty Town', 'town', 'easy'],
+    ["Sackbeard's Tavern", 'building', 'easy', 'The Shell Tavern'], ['Roto Kaiishi', 'town', 'easy'],
+    ['Fenwick', 'town', 'easy'], ['Breakback Mountains', 'landmark', 'easy'], ['Whiskey Shallows', 'landmark', 'easy'],
+
+    ['Hoegaarden Library', 'building', 'medium'], ['The Cloister', 'building', 'medium'], ['Killdeath Peak', 'landmark', 'medium'],
+    ["Fentmaxxer's Observatory", 'building', 'medium'], ['Blodello Bridge', 'landmark', 'medium'],
+    ["John Cum's Cumstead", 'building', 'medium'], ['Brandywine Brush', 'landmark', 'medium'], ['Rum Ridge', 'landmark', 'medium'],
+    ['Gulf of Aleforge', 'landmark', 'medium'], ['Bottomless Bay', 'landmark', 'medium'],
+    ['Orchenk Manufactory', 'building', 'medium', 'The Factory'], ['Sodomire Gaol', 'building', 'medium'],
+
+    ['The Vanishing House', 'building', 'hard', 'The Mansion'], ['Basin at Bully Hill', 'landmark', 'hard'],
+    ['Dead Man Hallows', 'landmark', 'hard'], ['Thorny Thicket', 'building', 'hard', 'A bar in the forest'],
+    ['Name', 'town', 'hard'], ["Jack Anqoak's Grog Galley", 'building', 'hard'],
+    ['Wolendi East', 'building', 'hard', 'East Wind farm'], ['Wolendi West', 'building', 'hard', 'West Wind farm'],
+    ['Bar Bastion', 'building', 'hard'], ['Poopwata Basin', 'building', 'hard'], ["Hogwilly's Tavern", 'building', 'hard'],
+    ['Owe Block', 'town', 'hard'], ['Aleforge Castle', 'building', 'hard'], ['CockPowers Clock Tower', 'building', 'hard'],
+    ['Gilded Tankard', 'building', 'hard'], ['Boner Bar', 'building', 'hard'], ['The Last Drop', 'building', 'hard'],
+    ["Witch Doctor's Tower", 'building', 'hard'],
+
+    ['Great Beast Skull', 'landmark', 'expert', 'Overgrown deer-like skull'],
+    ['Sea Monster Ribcage', 'landmark', 'expert', 'Sunk into a small ravine'],
+    ['Toothed Beast Skull', 'landmark', 'expert', 'A skull with an altar inside'],
+    ['Brandywine Brush Shrine', 'landmark', 'expert'], ['Owe Block Veilwalker Shrine', 'landmark', 'expert'],
+    ["Sexton Gobbler's Shrine", 'landmark', 'expert'], ['Fenwick Bell Shrine', 'landmark', 'expert'],
+    ['Abandoned Shrine', 'landmark', 'expert'],
+    ['Sackbeard Memorial Well', 'landmark', 'expert'], ['Hall of Ale', 'building', 'expert'],
+    ['Aleforge Post Office', 'building', 'expert'], ['Krappenschitz Estate', 'building', 'expert'],
+    ['Old Aleforge Municipal', 'building', 'expert'], ["Freddy Hog's Freaky Hogs", 'building', 'expert'],
+    ['Billy Ball Busters Inn', 'building', 'expert'],
+
+    ['Cardinal Addy', 'npc', 'medium'], ['Mr. BBL', 'npc', 'hard'], ['Lady Edgermire', 'npc', 'hard'],
+    ['Sir Robert CockPower', 'npc', 'medium'], ['Quickety Cricket', 'npc', 'hard'], ['Glub Tuppus Wepple', 'npc', 'medium'],
+    ['Babu Packo', 'npc', 'hard'], ['Wagwan', 'npc', 'hard'], ['Jophisus', 'npc', 'expert'],
+    ['Ignatius De Montfort', 'npc', 'hard'], ['Jasper "no Eyes, all-Hands"', 'npc', 'expert'], ['Old Salty', 'npc', 'medium'],
+    ['Hornithan Buttlube', 'npc', 'hard'], ['Sheriff Edward Cocaine', 'npc', 'medium'], ['Cpt. Lincoln Dillydally', 'npc', 'hard'],
+    ['John Rump', 'npc', 'hard'], ['Gale Derecho', 'npc', 'expert', 'Wind farmer'], ['Guster Derecho', 'npc', 'expert', 'Wind farmer']
+  ];
+
+  function slug(s) {
+    return String(s).normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
+      .replace(/&/g, ' and ').replace(/['’"]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'location';
+  }
+  function uniqueId(name, selfIdx) {
+    var base = slug(name), id = base, n = 2;
+    while (state.locations.some(function (l, i) { return i !== selfIdx && l.id === id; })) id = base + '-' + n++;
+    return id;
+  }
+  function seedLocations() {
+    var out = [];
+    SEED.forEach(function (s) {
+      out.push({ id: slug(s[0]), name: s[0], kind: s[1], difficulty: s[2], hint: s[3] || '', x: null, z: null, seed: true });
+    });
+    return out;
+  }
+  var SEED_IDS = {};
+  SEED.forEach(function (s) { SEED_IDS[slug(s[0])] = 1; });
+
+  function normLoc(l, fallbackName) {
+    var o = {
+      id: l.id ? String(l.id) : '', name: String(l.name || fallbackName || '').trim(),
+      kind: KINDS.indexOf(l.kind) >= 0 ? l.kind : 'other',
+      difficulty: DIFFS.indexOf(l.difficulty) >= 0 ? l.difficulty : 'medium',
+      hint: l.hint ? String(l.hint) : '', x: null, z: null
+    };
+    if (isFinite(parseFloat(l.x)) && isFinite(parseFloat(l.z)) && l.x !== null && l.z !== null) {
+      o.x = Math.floor(parseFloat(l.x)); o.z = Math.floor(parseFloat(l.z));
+    }
+    o.seed = !!SEED_IDS[slug(o.name)];
+    return o;
+  }
+
+  /* ================= state ================= */
+  var state = { meta: JSON.parse(JSON.stringify(DEFAULT_META)), play: Object.assign({}, DEFAULT_PLAY), locations: [] };
+  var ui = { selected: null, armed: null, diffs: [], kinds: [], status: 'all', q: '', grid: false, names: false, view: null };
+  var undoStack = [];
+
+  (function load() {
+    var d = PT.store.get(DRAFT_KEY, null);
+    if (d && Array.isArray(d.locations)) {
+      state.meta = Object.assign({}, DEFAULT_META, d.meta || {});
+      state.play = Object.assign({}, DEFAULT_PLAY, d.play || {});
+      state.locations = d.locations.map(function (l) { return normLoc(l); }).filter(function (l) { return l.name; });
+      fixIds();
+    } else {
+      state.locations = seedLocations();
+    }
+    var u = PT.store.get(UI_KEY, null);
+    if (u) ['diffs', 'kinds', 'status', 'q', 'grid', 'names', 'view'].forEach(function (k) { if (u[k] != null) ui[k] = u[k]; });
+  })();
+
+  function fixIds() {
+    var seen = {};
+    state.locations.forEach(function (l) {
+      var base = l.id || slug(l.name), id = base, n = 2;
+      while (seen[id]) id = base + '-' + n++;
+      l.id = id; seen[id] = 1;
+    });
+  }
+  function save() {
+    state.savedAt = new Date().toISOString();
+    if (!PT.store.set(DRAFT_KEY, state)) toast('Could not save the draft to localStorage. Export to keep your work.');
+  }
+  function saveUi() {
+    var c = map.getCenter();
+    ui.view = { x: Math.round(c.lng), z: Math.round(-c.lat), zoom: map.getZoom() };
+    PT.store.set(UI_KEY, { diffs: ui.diffs, kinds: ui.kinds, status: ui.status, q: ui.q, grid: ui.grid, names: ui.names, view: ui.view });
+  }
+  function byId(id) { for (var i = 0; i < state.locations.length; i++) if (state.locations[i].id === id) return state.locations[i]; return null; }
+  function placed(l) { return l.x !== null && l.z !== null; }
+
+  /* every change goes through commit(): snapshot for undo, apply, autosave, re-render */
+  function commit(label, fn) {
+    undoStack.push({ label: label, data: JSON.stringify(state.locations), meta: JSON.stringify(state.meta), sel: ui.selected });
+    if (undoStack.length > 100) undoStack.shift();
+    fn();
+    save(); renderAll();
+  }
+  function undo() {
+    var u = undoStack.pop();
+    if (!u) return;
+    state.locations = JSON.parse(u.data); state.meta = JSON.parse(u.meta);
+    ui.selected = byId(u.sel) ? u.sel : null;
+    disarm(true);
+    save(); renderAll();
+    toast('Undid: ' + u.label);
+  }
+
+  /* ================= map ================= */
+  var mapEl = document.getElementById('map');
+  var map = PT.makeMap(mapEl);
+  PT.makeTileLayer(state.meta.world, state.meta.mapName || 'flat').addTo(map);
+  var PAD = 0.05;
+  PT.lockTo(map, state.play, PAD);
+  if (ui.view && isFinite(ui.view.zoom)) map.setView(PT.toLL(ui.view.x, ui.view.z), Math.max(map.getMinZoom(), ui.view.zoom), { animate: false });
+  map.on('resize', function () {
+    map.setMinZoom(Math.max(PT.MIN_ZOOM, map.getBoundsZoom(PT.boxToBounds(state.play).pad(PAD), false)));
+  });
+  map.on('moveend', function () { saveUi(); });
+
+  function blockCenter(x, z) { return PT.toLL(x + 0.5, z + 0.5); }
+  function blockAt(ll) { return { x: Math.floor(ll.lng), z: Math.floor(-ll.lat) }; }
+  function fmt(n) { return n < 0 ? '−' + Math.abs(n) : String(n); }
+  function inPlay(b) { var p = state.play; return b.x >= p.x0 && b.x < p.x1 && b.z >= p.z0 && b.z < p.z1; }
+
+  // dim everything outside the play area, then the gold boundary and its corner labels
+  (function drawBoundary() {
+    var p = state.play, big = 40000;
+    L.polygon([
+      [PT.toLL(-big, -big), PT.toLL(big, -big), PT.toLL(big, big), PT.toLL(-big, big)],
+      [PT.toLL(p.x0, p.z0), PT.toLL(p.x1, p.z0), PT.toLL(p.x1, p.z1), PT.toLL(p.x0, p.z1)]
+    ], { stroke: false, fillColor: '#000', fillOpacity: 0.38, interactive: false }).addTo(map);
+    L.rectangle(PT.boxToBounds(p), { color: '#C9A84C', weight: 2, fill: false, interactive: false }).addTo(map);
+    [[p.x0, p.z0, 'nw'], [p.x1, p.z0, 'ne'], [p.x0, p.z1, 'sw'], [p.x1, p.z1, 'se']].forEach(function (c) {
+      var pos = { nw: 'left:5px;top:3px', ne: 'right:5px;top:3px', sw: 'left:5px;bottom:3px', se: 'right:5px;bottom:3px' }[c[2]];
+      L.marker(PT.toLL(c[0], c[1]), {
+        interactive: false, keyboard: false,
+        icon: L.divIcon({ className: 'corner-lbl', iconSize: [0, 0], html: '<div style="' + pos + '">' + fmt(c[0]) + ', ' + fmt(c[1]) + '</div>' })
+      }).addTo(map);
+    });
+  })();
+
+  /* 500-block grid: faint lines on the map, labels pinned to the viewport edges */
+  var gridLayer = L.layerGroup(), gridLabels = document.getElementById('gridlabels'), STEP = 500;
+  (function buildGrid() {
+    var p = state.play, style = { color: '#fff', weight: 1, opacity: 0.16, interactive: false };
+    for (var x = Math.ceil(p.x0 / STEP) * STEP; x <= p.x1; x += STEP) L.polyline([PT.toLL(x, p.z0), PT.toLL(x, p.z1)], style).addTo(gridLayer);
+    for (var z = Math.ceil(p.z0 / STEP) * STEP; z <= p.z1; z += STEP) L.polyline([PT.toLL(p.x0, z), PT.toLL(p.x1, z)], style).addTo(gridLayer);
+  })();
+  function drawGridLabels() {
+    if (!ui.grid) { gridLabels.innerHTML = ''; return; }
+    var p = state.play, size = map.getSize(), html = [], topOff = document.getElementById('tools').offsetHeight + 16;
+    var tl = map.containerPointToLatLng([0, 0]), br = map.containerPointToLatLng([size.x, size.y]);
+    var vx0 = Math.max(p.x0, tl.lng), vx1 = Math.min(p.x1, br.lng), vz0 = Math.max(p.z0, -tl.lat), vz1 = Math.min(p.z1, -br.lat);
+    var edgeTop = Math.max(topOff, map.latLngToContainerPoint(PT.toLL(0, p.z0)).y + 4);
+    var edgeLeft = Math.max(6, map.latLngToContainerPoint(PT.toLL(p.x0, 0)).x + 4);
+    for (var x = Math.ceil(vx0 / STEP) * STEP; x <= vx1; x += STEP) {
+      if (x === p.x0 || x === p.x1) continue;   // the box edges carry the corner labels
+      var cx = map.latLngToContainerPoint(PT.toLL(x, 0)).x;
+      html.push('<div style="left:' + (cx + 3) + 'px;top:' + edgeTop + 'px">x ' + fmt(x) + '</div>');
+    }
+    for (var z = Math.ceil(vz0 / STEP) * STEP; z <= vz1; z += STEP) {
+      if (z === p.z0 || z === p.z1) continue;
+      var cy = map.latLngToContainerPoint(PT.toLL(0, z)).y;
+      if (cy < topOff + 14) continue;
+      html.push('<div style="left:' + edgeLeft + 'px;top:' + (cy + 2) + 'px">z ' + fmt(z) + '</div>');
+    }
+    gridLabels.innerHTML = html.join('');
+  }
+  function setGrid(on) {
+    ui.grid = on;
+    if (on) gridLayer.addTo(map); else gridLayer.remove();
+    document.getElementById('gridT').classList.toggle('on', on);
+    drawGridLabels(); saveUi();
+  }
+  map.on('move zoom resize', drawGridLabels);
+
+  /* cursor readout */
+  var rx = document.getElementById('rx'), rz = document.getElementById('rz'), readout = document.getElementById('readout');
+  function showReadout(ll) {
+    var b = blockAt(ll);
+    rx.textContent = fmt(b.x); rz.textContent = fmt(b.z);
+    readout.classList.toggle('out', !inPlay(b));
+    rx.className = rz.className = inPlay(b) ? '' : 'out';
+  }
+  map.on('mousemove', function (e) { showReadout(e.latlng); });
+
+  /* go to x, z */
+  var pingMarker = null, pingTimer = null;
+  document.getElementById('gotoForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var nums = (document.getElementById('gotoIn').value.match(/-?\d+(?:\.\d+)?/g) || []).map(Number);
+    if (nums.length < 2) { toast('Type a position like "512, -300" (or x y z from F3)'); return; }
+    var x = Math.floor(nums[0]), z = Math.floor(nums.length >= 3 ? nums[2] : nums[1]);
+    goTo(x, z, Math.max(map.getZoom(), PT.NATIVE_ZOOM));
+    if (pingMarker) pingMarker.remove();
+    clearTimeout(pingTimer);
+    pingMarker = L.marker(blockCenter(x, z), { interactive: false, keyboard: false,
+      icon: L.divIcon({ className: '', iconSize: [26, 26], html: '<div class="goto-ping"></div>' }) }).addTo(map);
+    pingTimer = setTimeout(function () { pingMarker.remove(); pingMarker = null; }, 4000);
+    showReadout(blockCenter(x, z));
+  });
+  function goTo(x, z, zoom) { map.setView(blockCenter(x, z), zoom == null ? map.getZoom() : zoom); }
+
+  /* pins */
+  var markers = {};
+  function pinIcon(l) {
+    var sel = l.id === ui.selected;
+    var svg = '<svg width="24" height="32" viewBox="0 0 24 32"><path d="M12 31C12 31 2 19.5 2 11.5a10 10 0 1 1 20 0C22 19.5 12 31 12 31Z" fill="' +
+      COLOR[l.difficulty] + '" stroke="#15100d" stroke-width="1.5"/><text x="12" y="15.5" text-anchor="middle" font-size="11" font-weight="700" ' +
+      'font-family="system-ui,sans-serif" fill="#15100d">' + GLYPH[l.kind] + '</text></svg>';
+    return L.divIcon({ className: 'pin' + (sel ? ' sel' : ''), iconSize: [24, 32], iconAnchor: [12, 31], tooltipAnchor: [0, -30], html: '<div class="in">' + svg + '</div>' });
+  }
+  function renderPins() {
+    Object.keys(markers).forEach(function (id) { markers[id].remove(); });
+    markers = {};
+    state.locations.forEach(function (l) {
+      if (!placed(l) || !(matches(l) || l.id === ui.selected)) return;
+      var m = L.marker(blockCenter(l.x, l.z), { icon: pinIcon(l), draggable: true, autoPan: true, riseOnHover: true,
+        zIndexOffset: l.id === ui.selected ? 1000 : 0, title: '' });
+      m.bindTooltip(esc(l.name), { className: 'pin-tip', direction: 'top', permanent: ui.names, offset: [0, 0] });
+      m.on('click', function (e) {
+        if (ui.armed) { placeArmed(blockAt(e.latlng)); return; }
+        select(l.id, false);
+      });
+      var before = null;
+      m.on('dragstart', function () { before = { x: l.x, z: l.z }; if (ui.selected !== l.id) { ui.selected = l.id; renderList(); renderEditor(); } });
+      m.on('drag', function (e) { showReadout(e.target.getLatLng()); });
+      m.on('dragend', function (e) {
+        var b = blockAt(e.target.getLatLng());
+        if (b.x === before.x && b.z === before.z) { e.target.setLatLng(blockCenter(b.x, b.z)); return; }
+        commit('move ' + l.name, function () { var t = byId(l.id); t.x = b.x; t.z = b.z; ui.selected = l.id; });
+      });
+      m.addTo(map);
+      markers[l.id] = m;
+    });
+  }
+
+  /* arming: click a wishlist row (or add a custom location), then click the map */
+  function arm(id) {
+    var l = byId(id); if (!l) return;
+    ui.armed = id; ui.selected = id;
+    document.getElementById('armName').textContent = l.name;
+    document.getElementById('armbar').classList.add('show');
+    mapEl.classList.add('armed');
+    closeDrawer();
+    renderList(); renderEditor(); renderPins();
+  }
+  function disarm(quiet) {
+    ui.armed = null;
+    document.getElementById('armbar').classList.remove('show');
+    mapEl.classList.remove('armed');
+    if (!quiet) { renderList(); renderEditor(); }
+  }
+  function placeArmed(b) {
+    var id = ui.armed, l = byId(id);
+    if (!l) return disarm();
+    if (!inPlay(b)) { toast('That spot is outside the play area'); return; }
+    disarm(true);
+    commit((placed(l) ? 'move ' : 'place ') + l.name, function () { l.x = b.x; l.z = b.z; ui.selected = id; });
+    toast('Placed ' + l.name + ' at ' + fmt(b.x) + ', ' + fmt(b.z));
+  }
+  map.on('click', function (e) {
+    showReadout(e.latlng);
+    if (ui.armed) { placeArmed(blockAt(e.latlng)); return; }
+    if (ui.selected) { ui.selected = null; renderAll(); }
+  });
+  document.getElementById('armCancel').onclick = function () { disarm(); };
+
+  function select(id, pan) {
+    ui.selected = id;
+    var l = byId(id);
+    if (pan && l && placed(l)) {
+      var ll = blockCenter(l.x, l.z), z = Math.max(map.getZoom(), 3);
+      if (z !== map.getZoom() || !map.getBounds().pad(-0.15).contains(ll)) map.setView(ll, z);
+    }
+    renderAll();
+  }
+
+  /* ================= sidebar ================= */
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function opts(list, cur) { return list.map(function (v) { return '<option value="' + v + '"' + (v === cur ? ' selected' : '') + '>' + cap(v) + '</option>'; }).join(''); }
+  function fold(s) { return String(s).normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+
+  function matches(l) {
+    if (ui.diffs.length && ui.diffs.indexOf(l.difficulty) < 0) return false;
+    if (ui.kinds.length && ui.kinds.indexOf(l.kind) < 0) return false;
+    if (ui.status === 'placed' && !placed(l)) return false;
+    if (ui.status === 'unplaced' && placed(l)) return false;
+    if (ui.q) { var q = fold(ui.q); if (fold(l.name).indexOf(q) < 0 && fold(l.hint).indexOf(q) < 0) return false; }
+    return true;
+  }
+
+  function renderCounts() {
+    document.getElementById('counts').innerHTML = DIFFS.map(function (d) {
+      var all = state.locations.filter(function (l) { return l.difficulty === d; });
+      var p = all.filter(placed).length;
+      return '<div class="count' + (p < TARGET ? ' low' : '') + '" data-d="' + d + '" title="' + p + ' placed of ' + all.length + '">' +
+        '<div class="lbl"><span class="dot" style="background:' + COLOR[d] + '"></span>' + d + '</div>' +
+        '<div class="num">' + p + ' <small>/ ' + all.length + '</small></div></div>';
+    }).join('');
+  }
+
+  function renderFilters() {
+    document.getElementById('fDiff').innerHTML = DIFFS.map(function (d) {
+      return '<button class="chip' + (ui.diffs.indexOf(d) >= 0 ? ' on' : '') + '" data-d="' + d + '"><span class="dot" style="background:' + COLOR[d] + '"></span>' + cap(d) + '</button>';
+    }).join('');
+    document.getElementById('fKind').innerHTML = KINDS.map(function (k) {
+      return '<button class="chip' + (ui.kinds.indexOf(k) >= 0 ? ' on' : '') + '" data-k="' + k + '">' + GLYPH[k] + ' ' + cap(k) + '</button>';
+    }).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('#fStatus button'), function (b) { b.classList.toggle('on', b.dataset.v === ui.status); });
+    var q = document.getElementById('q'); if (q.value !== ui.q) q.value = ui.q;
+  }
+
+  function renderList() {
+    var shown = state.locations.filter(matches), html = [];
+    document.getElementById('shown').innerHTML = shown.length + ' of ' + state.locations.length +
+      (shown.length < state.locations.length ? ' · <button class="linkish" id="clearF">clear filters</button>' : '');
+    DIFFS.forEach(function (d) {
+      var g = shown.filter(function (l) { return l.difficulty === d; });
+      if (!g.length) return;
+      html.push('<div class="group-h"><span class="dot" style="background:' + COLOR[d] + '"></span>' + cap(d) + ' <small>' + g.filter(placed).length + ' / ' + g.length + ' placed</small></div>');
+      g.forEach(function (l) {
+        var p = placed(l);
+        html.push('<div class="row' + (l.id === ui.selected ? ' sel' : '') + (l.id === ui.armed ? ' armed' : '') + '" data-id="' + esc(l.id) + '">' +
+          '<span class="st' + (p ? ' ok' : '') + '">' + (p ? '✓' : '○') + '</span>' +
+          '<div class="main"><div class="nm">' + esc(l.name) + '</div><div class="sub">' + GLYPH[l.kind] + ' ' + l.kind +
+          (l.seed ? '' : ' · custom') + (p ? ' · ' + fmt(l.x) + ', ' + fmt(l.z) : '') + (l.hint ? ' · ' + esc(l.hint) : '') + '</div></div>' +
+          (p ? '<button class="btn small mv" data-arm="' + esc(l.id) + '" title="Re-arm to move it">Move</button>' : '') +
+          '<select data-diff="' + esc(l.id) + '" aria-label="Difficulty">' + opts(DIFFS, l.difficulty) + '</select></div>');
+      });
+    });
+    if (!html.length) html.push('<div class="empty">Nothing matches these filters.</div>');
+    document.getElementById('list').innerHTML = html.join('');
+  }
+
+  function renderEditor() {
+    var el = document.getElementById('editor'), l = byId(ui.selected);
+    if (!l) { el.classList.remove('show'); el.innerHTML = ''; return; }
+    var p = placed(l);
+    el.classList.add('show');
+    el.innerHTML =
+      '<h3><span class="dot" style="background:' + COLOR[l.difficulty] + '"></span>' + esc(l.name) +
+      '<span class="tag">' + (l.seed ? 'wishlist' : 'custom') + '</span><span class="tag">' + esc(l.id) + '</span></h3>' +
+      '<div class="grid2">' +
+      '<div class="field wide"><label>Name</label><input data-f="name" value="' + esc(l.name) + '"></div>' +
+      '<div class="field"><label>Kind</label><select data-f="kind">' + opts(KINDS, l.kind) + '</select></div>' +
+      '<div class="field"><label>Difficulty</label><select data-f="difficulty">' + opts(DIFFS, l.difficulty) + '</select></div>' +
+      '<div class="field wide"><label>Hint</label><input data-f="hint" value="' + esc(l.hint) + '" placeholder="optional"></div>' +
+      '<div class="field"><label>x</label><input data-f="x" type="number" step="1" value="' + (p ? l.x : '') + '" placeholder="unplaced"></div>' +
+      '<div class="field"><label>z</label><input data-f="z" type="number" step="1" value="' + (p ? l.z : '') + '" placeholder="unplaced"></div>' +
+      '</div><div class="ed-actions">' +
+      (ui.armed === l.id ? '<button class="btn" data-act="cancel">Cancel placing</button>'
+        : '<button class="btn primary" data-act="arm">' + (p ? 'Move on map' : 'Place on map') + '</button>') +
+      (p ? '<button class="btn" data-act="show">Show</button><button class="btn" data-act="unplace">Unplace</button>' : '') +
+      '<span class="spacer"></span><button class="btn danger" data-act="delete">Delete</button>' +
+      '<button class="btn" data-act="done">Done</button></div>';
+  }
+
+  function renderLegend() {
+    document.getElementById('legend').innerHTML = DIFFS.map(function (d) {
+      return '<span><span class="dot" style="background:' + COLOR[d] + '"></span>' + cap(d) + '</span>';
+    }).join('') + '<span class="kinds">T town · B building · L landmark · N npc · • other</span>';
+  }
+
+  function renderAll() { renderCounts(); renderFilters(); renderList(); renderEditor(); renderPins(); undoBtnState(); }
+  function undoBtnState() {
+    var b = document.getElementById('undoBtn'), u = undoStack[undoStack.length - 1];
+    b.disabled = !u; b.title = u ? 'Undo ' + u.label + ' (Ctrl+Z)' : 'Nothing to undo';
+  }
+
+  /* sidebar events */
+  document.getElementById('fDiff').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-d]'); if (!b) return;
+    toggleIn(ui.diffs, b.dataset.d); saveUi(); renderAll();
+  });
+  document.getElementById('fKind').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-k]'); if (!b) return;
+    toggleIn(ui.kinds, b.dataset.k); saveUi(); renderAll();
+  });
+  document.getElementById('counts').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-d]'); if (!b) return;
+    ui.diffs = ui.diffs.length === 1 && ui.diffs[0] === b.dataset.d ? [] : [b.dataset.d]; saveUi(); renderAll();
+  });
+  document.getElementById('fStatus').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-v]'); if (!b) return;
+    ui.status = b.dataset.v; saveUi(); renderAll();
+  });
+  document.getElementById('q').addEventListener('input', function (e) { ui.q = e.target.value; saveUi(); renderList(); renderPins(); });
+  document.getElementById('shown').addEventListener('click', function (e) {
+    if (e.target.id !== 'clearF') return;
+    ui.diffs = []; ui.kinds = []; ui.status = 'all'; ui.q = ''; saveUi(); renderAll();
+  });
+  function toggleIn(arr, v) { var i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); else arr.push(v); }
+
+  var list = document.getElementById('list');
+  list.addEventListener('click', function (e) {
+    if (e.target.closest('select')) return;
+    var mv = e.target.closest('[data-arm]');
+    if (mv) { arm(mv.dataset.arm); return; }
+    var row = e.target.closest('.row'); if (!row) return;
+    var l = byId(row.dataset.id); if (!l) return;
+    if (ui.armed === l.id) { disarm(); return; }
+    if (placed(l)) { disarm(true); select(l.id, true); closeDrawer(); }
+    else arm(l.id);
+  });
+  list.addEventListener('change', function (e) {
+    var s = e.target.closest('[data-diff]'); if (!s) return;
+    var l = byId(s.dataset.diff);
+    commit('difficulty of ' + l.name, function () { l.difficulty = s.value; });
+  });
+
+  var editor = document.getElementById('editor');
+  editor.addEventListener('change', function (e) {
+    var f = e.target.dataset.f, l = byId(ui.selected); if (!f || !l) return;
+    var v = e.target.value;
+    if (f === 'name') {
+      v = v.trim(); if (!v) { e.target.value = l.name; return; }
+      var idx = state.locations.indexOf(l);
+      commit('rename ' + l.name, function () { l.name = v; l.id = uniqueId(v, idx); l.seed = !!SEED_IDS[slug(v)] || l.seed; ui.selected = l.id; });
+    } else if (f === 'x' || f === 'z') {
+      var n = parseFloat(v);
+      if (!isFinite(n)) { renderEditor(); return; }
+      var other = f === 'x' ? l.z : l.x;
+      if (other === null) other = f === 'x' ? Math.round(-map.getCenter().lat) : Math.round(map.getCenter().lng);
+      commit('move ' + l.name, function () { if (f === 'x') { l.x = Math.floor(n); l.z = other; } else { l.z = Math.floor(n); l.x = other; } });
+      goTo(l.x, l.z);
+    } else {
+      commit(f + ' of ' + l.name, function () { l[f] = v; });
+    }
+  });
+  editor.addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.target.blur(); });
+  editor.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]'), l = byId(ui.selected); if (!b || !l) return;
+    var act = b.dataset.act;
+    if (act === 'arm') arm(l.id);
+    else if (act === 'cancel') disarm();
+    else if (act === 'show') select(l.id, true);
+    else if (act === 'done') { disarm(true); ui.selected = null; renderAll(); }
+    else if (act === 'unplace') commit('unplace ' + l.name, function () { l.x = null; l.z = null; });
+    else if (act === 'delete') {
+      if (ui.armed === l.id) disarm(true);
+      commit('delete ' + l.name, function () { state.locations.splice(state.locations.indexOf(l), 1); ui.selected = null; });
+      toast('Deleted ' + l.name + '. Undo brings it back.');
+    }
+  });
+
+  document.getElementById('undoBtn').onclick = undo;
+
+  /* add location */
+  var addModal = document.getElementById('addModal');
+  document.getElementById('adKind').innerHTML = opts(KINDS, 'building');
+  document.getElementById('adDiff').innerHTML = opts(DIFFS, 'hard');
+  document.getElementById('addBtn').onclick = function () {
+    document.getElementById('addForm').reset();
+    document.getElementById('adKind').value = 'building'; document.getElementById('adDiff').value = 'hard';
+    openModal(addModal); document.getElementById('adName').focus();
+  };
+  document.getElementById('addForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = document.getElementById('adName').value.trim(); if (!name) return;
+    var l = { id: '', name: name, kind: document.getElementById('adKind').value, difficulty: document.getElementById('adDiff').value,
+      hint: document.getElementById('adHint').value.trim(), x: null, z: null, seed: false };
+    closeModal(addModal);
+    commit('add ' + name, function () { l.id = uniqueId(name, -1); state.locations.push(l); });
+    arm(l.id);
+  });
+
+  /* ================= import / export ================= */
+  function cleanLoc(l, withPos) {
+    var o = { id: l.id, name: l.name, kind: l.kind, difficulty: l.difficulty, hint: l.hint || '' };
+    if (withPos) { o.x = l.x; o.z = l.z; }
+    return o;
+  }
+  function exportText() {
+    var pl = state.locations.filter(placed), un = state.locations.filter(function (l) { return !placed(l); });
+    function arr(a, withPos) { return a.length ? '[\n' + a.map(function (l) { return '    ' + JSON.stringify(cleanLoc(l, withPos)); }).join(',\n') + '\n  ]' : '[]'; }
+    var meta = JSON.stringify(state.meta, null, 2)   // short arrays like "mix" on one line
+      .replace(/\[\n\s+([^\[\]{}]*?)\n\s*\]/g, function (m, inner) { return '[' + inner.replace(/,\n\s+/g, ', ') + ']'; });
+    return '{\n  "meta": ' + meta.replace(/\n/g, '\n  ') +
+      ',\n  "play": ' + JSON.stringify(state.play) +
+      ',\n  "locations": ' + arr(pl, true) +
+      ',\n  "unplaced": ' + arr(un, false) + '\n}\n';
+  }
+  var exportModal = document.getElementById('exportModal'), exTA = document.getElementById('exportText');
+  document.getElementById('exportBtn').onclick = function () {
+    var pl = state.locations.filter(placed).length;
+    exTA.value = exportText();
+    document.getElementById('exportInfo').innerHTML = pl + ' placed locations go in <code>locations</code>. The ' + (state.locations.length - pl) +
+      ' unplaced ones are kept in <code>unplaced</code> so they survive a re-import. The game ignores that list.';
+    openModal(exportModal);
+    exTA.focus(); exTA.select(); exTA.scrollTop = 0;
+  };
+  exTA.addEventListener('focus', function () { exTA.select(); });
+  document.getElementById('exSelect').onclick = function () { exTA.focus(); exTA.select(); };
+  document.getElementById('exCopy').onclick = function () {
+    exTA.focus(); exTA.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    toast(ok ? 'Copied to clipboard' : 'Copy is blocked here. The text is selected, so press Ctrl+C / ⌘C.');
+  };
+  document.getElementById('exDownload').onclick = function () {
+    var blob = new Blob([exportText()], { type: 'application/json' }), a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'locations.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+  };
+
+  var importModal = document.getElementById('importModal'), imTA = document.getElementById('imText');
+  document.getElementById('importBtn').onclick = function () { imTA.value = ''; document.getElementById('imFile').value = ''; openModal(importModal); imTA.focus(); };
+  document.getElementById('imFile').addEventListener('change', function (e) {
+    var f = e.target.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function () { imTA.value = r.result; };
+    r.readAsText(f);
+  });
+  document.getElementById('imGo').onclick = function () {
+    var data;
+    try { data = JSON.parse(imTA.value); } catch (err) { toast('That is not valid JSON: ' + err.message); return; }
+    var locs = Array.isArray(data) ? data : data && Array.isArray(data.locations) ? data.locations : null;
+    if (!locs) { toast('No "locations" array found'); return; }
+    var all = locs.map(function (l) { return normLoc(l); });
+    var hasUnplaced = data && Array.isArray(data.unplaced);
+    if (hasUnplaced) all = all.concat(data.unplaced.map(function (l) { var o = normLoc(l); o.x = o.z = null; return o; }));
+    all = all.filter(function (l) { return l.name; });
+    if (!hasUnplaced) {   // a hand-made file: keep the rest of the wishlist as unplaced
+      var have = {}; all.forEach(function (l) { have[slug(l.name)] = 1; });
+      seedLocations().forEach(function (s) { if (!have[s.id]) all.push(s); });
+    }
+    var nPlaced = all.filter(placed).length;
+    closeModal(importModal);
+    disarm(true);
+    commit('import', function () {
+      state.locations = all; fixIds();
+      if (data && data.meta) state.meta = Object.assign({}, DEFAULT_META, data.meta);
+      if (data && data.play) state.play = Object.assign({}, DEFAULT_PLAY, data.play);
+      ui.selected = null;
+    });
+    toast('Imported ' + nPlaced + ' placed and ' + (all.length - nPlaced) + ' unplaced locations');
+  };
+  document.getElementById('imReset').onclick = function () {
+    if (!confirm('Clear every placement and custom location and start from the wishlist? (Undo can bring it back.)')) return;
+    closeModal(importModal); disarm(true);
+    commit('start over', function () { state.locations = seedLocations(); state.meta = JSON.parse(JSON.stringify(DEFAULT_META)); ui.selected = null; });
+  };
+
+  /* ================= chrome ================= */
+  function openModal(m) { m.classList.add('show'); }
+  function closeModal(m) { m.classList.remove('show'); }
+  Array.prototype.forEach.call(document.querySelectorAll('.modal-bg'), function (m) {
+    m.addEventListener('click', function (e) { if (e.target === m || e.target.closest('[data-close]')) closeModal(m); });
+  });
+  var toastTimer;
+  function toast(msg) {
+    var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+  function closeDrawer() { document.body.classList.remove('drawer'); }
+  document.getElementById('drawerBtn').onclick = function () { document.body.classList.add('drawer'); };
+  document.getElementById('drawerClose').onclick = closeDrawer;
+  document.getElementById('gridT').onclick = function () { setGrid(!ui.grid); };
+  document.getElementById('namesT').onclick = function () {
+    ui.names = !ui.names; this.classList.toggle('on', ui.names); saveUi(); renderPins();
+  };
+  document.getElementById('fitT').onclick = function () { map.fitBounds(PT.boxToBounds(state.play)); };
+
+  document.addEventListener('keydown', function (e) {
+    var typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+    if (e.key === 'Escape') {
+      var open = document.querySelector('.modal-bg.show');
+      if (open) closeModal(open); else if (ui.armed) disarm(); else if (ui.selected) { ui.selected = null; renderAll(); }
+    } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !typing) {
+      e.preventDefault(); undo();
+    }
+  });
+
+  /* Dynmap login check: tiles 401 without the login cookie */
+  fetch('/up/configuration', { credentials: 'same-origin', cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (c) { if (c && c.error === 'login-required') openModal(document.getElementById('loginModal')); })
+    .catch(function () { toast('Could not reach Dynmap (/up/configuration). Tiles may not load.'); });
+
+  document.getElementById('namesT').classList.toggle('on', ui.names);
+  renderLegend();
+  setGrid(ui.grid);
+  renderAll();
+
+  window.placer = { state: state, ui: ui, map: map, exportText: exportText };   // for debugging and tests
+})();
+</script>
+</body>
+</html>

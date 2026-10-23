@@ -1,0 +1,156 @@
+/* Pintland Tap — core: Dynmap tile layer, coordinates, scoring, daily picks, storage.
+ * Everything here is pure logic or Leaflet plumbing; no DOM besides the tile <img>s. */
+(function (global) {
+  'use strict';
+
+  var NATIVE_ZOOM = 5;      // Dynmap flat: zoom 5 = base tiles (4 px per block); zoom 0 = 'zzzzz' tiles
+  var PX_PER_BLOCK = 4;
+  var TILE = 128;           // px, = 32 blocks
+  var MAX_ZOOM = NATIVE_ZOOM + 2;
+  var MIN_ZOOM = -3;        // below 0 the 'zzzzz' tiles are scaled down, so the whole box fits on a phone
+
+  /* ---------- coordinates: 1 map unit = 1 block, lat = -z (north is up), lng = x ---------- */
+  function makeCRS() {
+    var a = PX_PER_BLOCK / Math.pow(2, NATIVE_ZOOM);
+    return L.extend({}, L.CRS.Simple, { transformation: new L.Transformation(a, 0, -a, 0) });
+  }
+  function toLL(x, z) { return L.latLng(-z, x); }
+  function fromLL(ll) { return { x: ll.lng, z: -ll.lat }; }
+  function boxToBounds(b) { return L.latLngBounds(toLL(b.x0, b.z0), toLL(b.x1, b.z1)); }
+  function dist(a, b) { var dx = a.x - b.x, dz = a.z - b.z; return Math.sqrt(dx * dx + dz * dz); }
+
+  /* ---------- Dynmap tile layer (same URL scheme Dynmap's own page uses) ---------- */
+  function tileUrl(base, c) {
+    var k = NATIVE_ZOOM - c.z, f = Math.pow(2, k);
+    var nx = c.x * f, ny = -(c.y + 1) * f;
+    var prefix = k > 0 ? new Array(k + 1).join('z') + '_' : '';
+    return base + Math.floor(nx / 32) + '_' + Math.floor(ny / 32) + '/' + prefix + nx + '_' + ny + '.jpg';
+  }
+  function makeTileLayer(world, mapName) {
+    var base = '/tiles/' + encodeURIComponent(world).replace(/'/g, '%27') + '/' + mapName + '/';
+    var Layer = L.GridLayer.extend({
+      createTile: function (c, done) {
+        var img = document.createElement('img');
+        img.alt = '';
+        img.draggable = false;
+        img.onload = function () { done(null, img); };
+        img.onerror = function () { img.style.visibility = 'hidden'; done(null, img); };
+        img.src = tileUrl(base, c);
+        return img;
+      }
+    });
+    return new Layer({
+      tileSize: TILE, minNativeZoom: 0, maxNativeZoom: NATIVE_ZOOM, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM,
+      noWrap: true, keepBuffer: 3, updateWhenIdle: false
+    });
+  }
+  function makeMap(el) {
+    var map = L.map(el, {
+      crs: makeCRS(), minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM, zoomSnap: 0.25, zoomDelta: 0.5,
+      wheelPxPerZoomLevel: 90, attributionControl: false, zoomControl: false,
+      maxBoundsViscosity: 0.85, doubleClickZoom: false
+    });
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    var sync = function () { el.classList.toggle('crisp', map.getZoom() > NATIVE_ZOOM + 0.01); };
+    map.on('zoom', sync); sync();
+    return map;
+  }
+  /* Lock the view to a box (blocks); players can't pan or zoom out beyond it. */
+  function lockTo(map, box, pad) {
+    var b = boxToBounds(box), padded = b.pad(pad == null ? 0.08 : pad);
+    map.setMaxBounds(padded);
+    map.setMinZoom(Math.max(MIN_ZOOM, map.getBoundsZoom(padded, false)));
+    map.fitBounds(b, { animate: false });
+  }
+
+  /* ---------- scoring ---------- */
+  /* One scale for every location: 100 within `perfect` blocks, then exponential falloff with scale k (blocks).
+   * k=200: 25 off -> 88, 50 -> 78, 100 -> 61, 200 -> 37, 500 -> 8. Tune k after play-testing. */
+  function score(d, perfect, k) {
+    var over = Math.max(0, d - (perfect || 0));
+    if (over === 0) return 100;
+    return Math.min(99, Math.round(100 * Math.exp(-over / k)));
+  }
+  function verdict(s) {
+    if (s >= 100) return 'Bullseye';
+    if (s >= 90) return 'Spot on';
+    if (s >= 70) return 'Close';
+    if (s >= 40) return 'In the neighborhood';
+    if (s >= 10) return 'Way off';
+    return 'Lost at sea';
+  }
+  function tile(s) { return s >= 85 ? '🟩' : s >= 60 ? '🟨' : s >= 30 ? '🟧' : '🟥'; }
+
+  /* ---------- daily puzzle ---------- */
+  function mulberry32(seed) {
+    var t = seed >>> 0;
+    return function () {
+      t = (t + 0x6D2B79F5) >>> 0;
+      var r = Math.imul(t ^ (t >>> 15), 1 | t);
+      r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffled(arr, rng) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(rng() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  /* Walks through a freshly shuffled copy of the pool each "cycle", so nothing repeats until the pool is used up. */
+  function bagPick(items, n, dayIdx, seedBase) {
+    if (items.length <= n) return items.slice();
+    var per = Math.floor(items.length / n), cycle = Math.floor(dayIdx / per), slot = dayIdx % per;
+    var order = shuffled(items, mulberry32(seedBase + cycle * 7919));
+    return order.slice(slot * n, slot * n + n);
+  }
+  var DIFFS = ['easy', 'medium', 'hard', 'expert'];
+  /* Daily rounds by difficulty mix (data.meta.mix, default 1 easy, 2 medium, 1 hard, 1 expert), easiest first. */
+  function pickDaily(data, puzzleNo) {
+    var mix = (data.meta && data.meta.mix) || ['easy', 'medium', 'medium', 'hard', 'expert'];
+    var day = puzzleNo - 1, want = {}, picks = [], have = {};
+    mix.forEach(function (d) { want[d] = (want[d] || 0) + 1; });
+    DIFFS.forEach(function (d, i) {
+      if (!want[d]) return;
+      var pool = data.locations.filter(function (l) { return l.difficulty === d; });
+      bagPick(pool, want[d], day, 101 + i * 53).forEach(function (l) { picks.push(l); have[l.id] = 1; });
+    });
+    if (picks.length < mix.length) {                           // a difficulty pool ran short: top up from anything left
+      var rest = shuffled(data.locations.filter(function (l) { return !have[l.id]; }), mulberry32(303 + day));
+      picks = picks.concat(rest.slice(0, mix.length - picks.length));
+    }
+    return picks.map(function (p, i) { return { p: p, i: i }; })
+      .sort(function (a, b) { return (DIFFS.indexOf(a.p.difficulty) - DIFFS.indexOf(b.p.difficulty)) || (a.i - b.i); })
+      .map(function (o) { return o.p; });
+  }
+  function ymd(tz, date) {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date || new Date());
+  }
+  function puzzleNumber(tz, epoch, date) {
+    var a = Date.parse(ymd(tz, date) + 'T00:00:00Z'), b = Date.parse(epoch + 'T00:00:00Z');
+    return Math.max(1, Math.round((a - b) / 86400000) + 1);
+  }
+  function secondsToNext(tz, date) {
+    var parts = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
+      .formatToParts(date || new Date());
+    var v = {}; parts.forEach(function (p) { v[p.type] = parseInt(p.value, 10); });
+    return 86400 - (v.hour * 3600 + v.minute * 60 + v.second);
+  }
+
+  /* ---------- storage (never throws) ---------- */
+  var store = {
+    get: function (k, d) { try { var v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+    del: function (k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } }
+  };
+
+  global.PT = {
+    NATIVE_ZOOM: NATIVE_ZOOM, MIN_ZOOM: MIN_ZOOM, MAX_ZOOM: MAX_ZOOM,
+    makeCRS: makeCRS, toLL: toLL, fromLL: fromLL, boxToBounds: boxToBounds, dist: dist,
+    tileUrl: tileUrl, makeTileLayer: makeTileLayer, makeMap: makeMap, lockTo: lockTo,
+    DIFFS: DIFFS, score: score, verdict: verdict, tile: tile,
+    mulberry32: mulberry32, shuffled: shuffled, bagPick: bagPick, pickDaily: pickDaily,
+    ymd: ymd, puzzleNumber: puzzleNumber, secondsToNext: secondsToNext, store: store
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
