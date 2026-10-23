@@ -8,7 +8,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var TAP = window.matchMedia && window.matchMedia('(hover: none)').matches ? 'Tap' : 'Click';
 
-  var data, meta, play, day, prog, map, N;
+  var data, meta, play, day, prog, map, N, pool;
   var phase = 'loading';          // start | guess | reveal | results | review
   var guess = null, guessMarker = null, layers = null;
 
@@ -51,21 +51,14 @@
       scoring: { k: 200, perfect: 0 }, world: "Jack's Long Island Iced Tea (World 1)-2", mapName: 'flat' }, d.meta || {});
     meta.scoring = Object.assign({ k: 200, perfect: 0 }, meta.scoring || {});
     play = d.play || { x0: -3500, z0: -3500, x1: 3500, z1: 3500 };
-    var pool = (d.locations || []).filter(function (l) {
+    pool = (d.locations || []).filter(function (l) {
       return l && l.id && l.name && isFinite(l.x) && isFinite(l.z) && PT.DIFFS.indexOf(l.difficulty) >= 0;
     });
     if (pool.length < 1) return fail('locations.json has no placed locations yet.');
 
     day = today();
     prog = PT.store.get(GAME_KEY + day.ymd, null);
-    if (!prog || !Array.isArray(prog.locs) || !prog.locs.length) {
-      // Freeze today's picks (with their positions) so a mid-day edit to locations.json can't change a game in progress.
-      var picks = PT.pickDaily({ meta: meta, locations: pool }, day.seedNo);
-      prog = { ymd: day.ymd, no: day.no, label: day.label, ack: 0, rounds: [], locs: picks.map(function (l) {
-        return { id: l.id, name: l.name, kind: l.kind || 'other', difficulty: l.difficulty, hint: l.hint || '', x: Math.floor(l.x), z: Math.floor(l.z) };
-      }) };
-      save();
-    }
+    if (!prog || !Array.isArray(prog.locs) || !prog.locs.length) { prog = newProg(day.seedNo, 1); save(); }
     N = prog.locs.length;
 
     map = PT.makeMap($('map'));
@@ -86,6 +79,7 @@
     $('reviewBtn').onclick = review;
     $('backBtn').onclick = showResults;
     $('copyBtn').onclick = copyShare;
+    $('againBtn').onclick = playAgain;
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
       if (phase === 'guess' && guess) lockIn(); else if (phase === 'reveal') next();
@@ -95,7 +89,29 @@
     if (prog.rounds.length >= N) showResults();
     else if (prog.rounds.length > prog.ack) showReveal(prog.rounds.length - 1, false);   // reloaded on a reveal
     else if (prog.rounds.length > 0) startRound();
-    else { phase = 'start'; $('sKicker').textContent = (day.no ? 'Puzzle ' : '') + day.label; show('start', true); }
+    else { phase = 'start'; $('sKicker').textContent = day.no ? 'Puzzle ' + day.label : 'Preview · unlimited games'; show('start', true); }
+  }
+
+  /* Freeze a game's picks (with their positions) so a mid-day edit to locations.json can't change a game in progress. */
+  function newProg(seedNo, attempt) {
+    var picks = PT.pickDaily({ meta: meta, locations: pool }, seedNo);
+    return { ymd: day.ymd, no: day.no, label: day.label, attempt: attempt, ack: 0, rounds: [], locs: picks.map(function (l) {
+      return { id: l.id, name: l.name, kind: l.kind || 'other', difficulty: l.difficulty, hint: l.hint || '', x: Math.floor(l.x), z: Math.floor(l.z) };
+    }) };
+  }
+
+  /* Preview days only: start another game with fresh picks, avoiding the last game's locations where the pool allows. */
+  function playAgain() {
+    if (prog.no) return;
+    var last = {}, best = null, bestOverlap = Infinity;
+    prog.locs.forEach(function (l) { last[l.id] = 1; });
+    for (var t = 0; t < 30 && bestOverlap > 0; t++) {
+      var p = newProg(10000 + Math.floor(Math.random() * 1e6), (prog.attempt || 1) + 1);
+      var overlap = p.locs.filter(function (l) { return last[l.id]; }).length;
+      if (overlap < bestOverlap) { best = p; bestOverlap = overlap; }
+    }
+    prog = best; N = prog.locs.length; save();
+    startRound();
   }
 
   function save() {
@@ -220,13 +236,16 @@
   }
 
   function recordStats() {
+    if (!prog.no) return;                     // preview games don't count
     var st = PT.store.get(STATS_KEY, { days: {} });
     st.days = st.days || {};
     st.days[prog.ymd] = { no: prog.no, total: totals() };
     PT.store.set(STATS_KEY, st);
   }
   function stats() {
-    var st = PT.store.get(STATS_KEY, { days: {} }), days = st.days || {}, keys = Object.keys(days).sort();
+    var st = PT.store.get(STATS_KEY, { days: {} }), days = {}, keys;
+    Object.keys(st.days || {}).forEach(function (k) { if (st.days[k].no) days[k] = st.days[k]; });
+    keys = Object.keys(days).sort();
     var played = keys.length, sum = 0, best = 0, run = 0, prev = null;
     keys.forEach(function (k) {
       sum += days[k].total;
@@ -245,7 +264,7 @@
     show('prompt', false); show('bar', false); show('reviewBar', false); show('start', false);
     layers.clearLayers();
     map.fitBounds(PT.boxToBounds(play), { animate: false });
-    $('resKicker').textContent = (prog.no ? 'Puzzle ' : '') + prog.label;
+    $('resKicker').textContent = prog.no ? 'Puzzle ' + prog.label : 'Preview · game ' + (prog.attempt || 1);
     $('resTotal').textContent = totals();
     $('resSquares').textContent = prog.rounds.map(function (r) { return PT.tile(r.s); }).join('');
     $('resRounds').innerHTML = prog.rounds.map(function (r, i) {
@@ -258,6 +277,10 @@
     var s = stats();
     $('stats').innerHTML = [['Played', s.played], ['Streak', s.streak], ['Best streak', s.best], ['Average', s.avg]]
       .map(function (p) { return '<div><b>' + p[1] + '</b><span>' + p[0] + '</span></div>'; }).join('');
+    $('againBtn').style.display = prog.no ? 'none' : '';
+    $('previewNote').style.display = prog.no ? 'none' : '';
+    $('previewNote').textContent = 'Preview games don\'t count toward your stats. Puzzle #1 starts ' +
+      new Date(meta.epoch + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' }) + '.';
     renderTop();
     show('results', true);
     tick();

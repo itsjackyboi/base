@@ -203,7 +203,8 @@ async function playRound(page, dx, dz, opts) {
   for (let i = 0; i < 5; i++) { await playRound(page, 2000, 0); await next(page); }
   await page.waitForSelector('#results.show');
   assert.deepStrictEqual(await page.$$eval('#stats b', b => b.map(x => x.textContent)).then(v => v.slice(0, 3)), ['3', '1', '2']);
-  step('missing a day resets the streak (played 3 · streak 1 · best 2)');
+  assert(await page.locator('#againBtn').isHidden(), 'no Play again on a numbered puzzle');
+  step('missing a day resets the streak (played 3 · streak 1 · best 2); numbered puzzles have no Play again');
 
   // before the epoch: an unnumbered preview
   await page.close();
@@ -215,7 +216,38 @@ async function playRound(page, dx, dz, opts) {
   for (let i = 0; i < 5; i++) { await playRound(page, 0, 50); await next(page); }
   await page.waitForSelector('#results.show');
   assert.match(await page.textContent('#shareText'), /^Pintland Tap Preview — \d+\/500\n/);
-  step('days before the epoch (Oct 24) play as "Preview"');
+  assert.strictEqual(await page.textContent('#resKicker'), 'Preview · game 1');
+  assert.deepStrictEqual(await page.$$eval('#stats b', b => b.map(x => x.textContent)).then(v => v.slice(0, 3)), ['3', '0', '2'], 'preview not counted');
+  assert.match(await page.textContent('#previewNote'), /don't count.*October 24/);
+  step('days before the epoch (Oct 24) play as "Preview" and do not count toward stats');
+
+  // unlimited preview games: Play again starts a new game with different picks, which survives a reload
+  const seen = new Set((await prog(page)).locs.map(l => l.id));
+  for (let game = 2; game <= 4; game++) {
+    await page.click('#againBtn');
+    await page.waitForFunction(() => window.ptGame.phase === 'guess');
+    const g = await prog(page);
+    assert.strictEqual(g.attempt, game);
+    assert.strictEqual(g.rounds.length, 0);
+    assert.deepStrictEqual(g.locs.map(l => l.difficulty), ['easy', 'medium', 'medium', 'hard', 'expert']);
+    if (game === 2) {
+      const overlap = g.locs.filter(l => seen.has(l.id)).length;
+      assert.strictEqual(overlap, 0, 'game 2 avoids game 1 locations');
+      await playRound(page, 0, 0);
+      await page.reload();
+      await page.waitForFunction(() => window.ptGame && window.ptGame.phase === 'reveal');
+      assert.strictEqual((await prog(page)).attempt, 2, 'reload keeps the replay');
+      await next(page);
+      for (let i = 1; i < 5; i++) { await playRound(page, 0, 0); await next(page); }
+    } else {
+      for (let i = 0; i < 5; i++) { await playRound(page, 0, 0); await next(page); }
+    }
+    await page.waitForSelector('#results.show');
+    assert.strictEqual(await page.textContent('#resKicker'), 'Preview · game ' + game);
+    assert.strictEqual(await page.textContent('#resTotal'), '500');
+  }
+  await page.screenshot({ path: path.join(OUT, 'game-preview-again.png') });
+  step('Play again: games 2–4 each get fresh picks (game 2 shares none with game 1), reload-safe, not counted');
   await ctx.close();
 
   /* ---------------- phone ---------------- */
