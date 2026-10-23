@@ -96,7 +96,9 @@
   function newProg(seedNo, attempt) {
     var picks = PT.pickDaily({ meta: meta, locations: pool }, seedNo);
     return { ymd: day.ymd, no: day.no, label: day.label, attempt: attempt, ack: 0, rounds: [], locs: picks.map(function (l) {
-      return { id: l.id, name: l.name, kind: l.kind || 'other', difficulty: l.difficulty, hint: l.hint || '', x: Math.floor(l.x), z: Math.floor(l.z) };
+      return { id: l.id, name: l.name, kind: l.kind || 'other', difficulty: l.difficulty, hint: l.hint || '', x: Math.floor(l.x), z: Math.floor(l.z),
+        alt: (Array.isArray(l.alt) ? l.alt : []).filter(function (a) { return a && isFinite(a.x) && isFinite(a.z); })
+          .map(function (a) { return { x: Math.floor(a.x), z: Math.floor(a.z) }; }) };
     }) };
   }
 
@@ -166,20 +168,25 @@
   function lockIn() {
     if (phase !== 'guess' || !guess) return;
     var i = prog.rounds.length, l = prog.locs[i];
-    var d = PT.dist(guess, l), s = PT.score(d, meta.scoring.perfect, meta.scoring.k);
-    prog.rounds.push({ id: l.id, gx: guess.x, gz: guess.z, d: Math.round(d * 10) / 10, s: s });
+    var n = PT.nearest(guess, l), d = n.d, s = PT.score(d, meta.scoring.perfect, meta.scoring.k);   // closest spot counts
+    prog.rounds.push({ id: l.id, gx: guess.x, gz: guess.z, ax: n.x, az: n.z, d: Math.round(d * 10) / 10, s: s });
     save();                                   // locked the instant it is made
     if (prog.rounds.length >= N) recordStats();
     showReveal(i, true);
   }
 
-  function answerIcon(l) {
+  function answerIcon(l, faint) {
     var svg = '<svg width="28" height="38" viewBox="0 0 24 32"><path d="M12 31C12 31 2 19.5 2 11.5a10 10 0 1 1 20 0C22 19.5 12 31 12 31Z" fill="#C9A84C" stroke="#15100d" stroke-width="1.5"/>' +
       '<text x="12" y="15.5" text-anchor="middle" font-size="11" font-weight="700" font-family="system-ui,sans-serif" fill="#15100d">' + GLYPH[l.kind] + '</text></svg>';
-    return L.divIcon({ className: 'ans', iconSize: [28, 38], iconAnchor: [14, 37], tooltipAnchor: [0, -34], html: svg });
+    return L.divIcon({ className: 'ans' + (faint ? ' faint' : ''), iconSize: [28, 38], iconAnchor: [14, 37], tooltipAnchor: [0, -34], html: svg });
   }
   function drawPair(l, r, label) {
-    var a = blockCenter(l.x, l.z), g = blockCenter(r.gx, r.gz);
+    var ax = r.ax != null ? r.ax : l.x, az = r.az != null ? r.az : l.z;   // the spot this guess was scored against
+    var a = blockCenter(ax, az), g = blockCenter(r.gx, r.gz);
+    PT.spots(l).forEach(function (sp) {   // the location's other spots, faded
+      if (sp.x === ax && sp.z === az) return;
+      L.marker(blockCenter(sp.x, sp.z), { icon: answerIcon(l, true), interactive: false, keyboard: false, zIndexOffset: 400 }).addTo(layers);
+    });
     L.polyline([g, a], { color: '#C9A84C', weight: 2.5, dashArray: '7 7', interactive: false }).addTo(layers);
     L.marker(g, { interactive: false, keyboard: false,
       icon: label ? L.divIcon({ className: '', iconSize: [20, 20], html: '<div class="num">' + label + '</div>' })

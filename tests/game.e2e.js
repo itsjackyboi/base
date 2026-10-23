@@ -250,6 +250,33 @@ async function playRound(page, dx, dz, opts) {
   step('Play again: games 2–4 each get fresh picks (game 2 shares none with game 1), reload-safe, not counted');
   await ctx.close();
 
+  /* ---------------- extra spots: the closest spot scores ---------------- */
+  {
+    const multi = JSON.parse(JSON.stringify(DATA));
+    multi.locations.forEach(l => { l.alt = [{ x: l.x + 600, z: l.z }]; });   // every location gets a second spot 600 blocks east
+    const mctx = await browser.newContext({ viewport: { width: 1200, height: 800 } });
+    const mp = await newPage(mctx, '2026-11-02T15:00:00Z');
+    await mp.route('**/pintland/locations.json', r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(multi) }));
+    await mp.goto(BASE);
+    await mp.waitForSelector('#start.show');
+    await mp.click('#startBtn');
+    const l0 = (await prog(mp)).locs[0];
+    assert.strictEqual(l0.alt.length, 1, 'picked location carries its extra spot');
+    await guessAt(mp, l0.x + 600, l0.z + 3);
+    await lock(mp);
+    assert.strictEqual(await mp.textContent('#rDist'), '3 blocks away', 'scored against the second spot');
+    const r0 = (await prog(mp)).rounds[0];
+    assert.deepStrictEqual([r0.ax, r0.az], [l0.x + 600, l0.z]);
+    assert.strictEqual(await mp.locator('.ans.faint').count(), 1, 'the other spot is shown faded');
+    await next(mp);
+    const l1 = (await prog(mp)).locs[1];
+    await guessAt(mp, l1.x + 10, l1.z);
+    await lock(mp);
+    assert.strictEqual(await mp.textContent('#rDist'), '10 blocks away', 'main spot still scores when closer');
+    await mctx.close();
+    step('a location with two spots scores against whichever is closer and shows the other faded');
+  }
+
   /* ---------------- phone ---------------- */
   console.log('phone 390x844, touch');
   const pctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });

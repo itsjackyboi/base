@@ -63,9 +63,9 @@ async function gotoXZ(page, txt) {
   await page.goto(BASE);
   await tilesLoaded(page);
   assert.strictEqual(await page.locator('#loginModal.show').count(), 0, 'no login card when /up/configuration is {}');
-  assert.strictEqual(await page.locator('#list .row').count(), 71, 'wishlist is seeded');
+  assert.strictEqual(await page.locator('#list .row').count(), 129, 'wishlist is seeded (71 + 58 lore picks)');
   await page.screenshot({ path: path.join(OUT, 'laptop-overview.png') });
-  step('loads, tiles render, wishlist seeded (71), no login card');
+  step('loads, tiles render, wishlist seeded (129), no login card');
 
   // whole box visible at start
   const fit = await page.evaluate(() => { const b = window.placer.map.getBounds(); return [b.getWest(), b.getEast(), -b.getNorth(), -b.getSouth()]; });
@@ -131,7 +131,7 @@ async function gotoXZ(page, txt) {
 
   // place a wishlist item
   await gotoXZ(page, '400, -500');
-  await page.locator('#list .row', { hasText: 'Providence' }).first().click();
+  await page.locator('#list .row[data-id="providence"]').first().click();
   assert(await page.locator('#armbar.show').count() === 1, 'arm bar shown');
   c = await mapCenterPx(page);
   await page.mouse.move(c.x + 40, c.y + 20);
@@ -139,7 +139,7 @@ async function gotoXZ(page, txt) {
   await page.mouse.click(c.x + 40, c.y + 20);
   let p = await loc(page, 'Providence');
   assert.strictEqual(fmt(p.x) + ', ' + fmt(p.z), expectRead, 'placed where the readout said');
-  assert(await page.locator('#list .row', { hasText: 'Providence' }).locator('.st.ok').count() === 1, 'check mark');
+  assert(await page.locator('#list .row[data-id="providence"]').locator('.st.ok').count() === 1, 'check mark');
   step('placed Providence from the wishlist at ' + expectRead);
 
   // drag the pin 80 px east, 40 px south at the current zoom
@@ -160,7 +160,7 @@ async function gotoXZ(page, txt) {
   step('dragged Providence pin: ' + fmt(p.x) + ',' + fmt(p.z) + ' → ' + fmt(p2.x) + ',' + fmt(p2.z));
 
   // re-arm a placed item via its Move button
-  const moveBtn = page.locator('#list .row', { hasText: 'Providence' }).locator('[data-arm]');
+  const moveBtn = page.locator('#list .row[data-id="providence"]').locator('[data-arm]');
   await moveBtn.evaluate(el => el.scrollIntoView({ block: 'center' }));   // keep it clear of the sticky group header
   await moveBtn.click();
   await page.mouse.click(c.x - 100, c.y - 60);
@@ -229,8 +229,9 @@ async function gotoXZ(page, txt) {
   await page.locator('#fStatus [data-v=all]').click();
   await page.fill('#q', 'shrine');
   names = await page.$$eval('#list .row .nm', n => n.map(x => x.textContent));
-  assert.strictEqual(names.length, 5, 'five shrines: ' + names);
-  await page.fill('#q', 'forest');   // hint search
+  assert.strictEqual(names.filter(n => /Shrine$/.test(n)).length, 5, 'five shrines: ' + names);
+  assert(names.includes("Tomb of Aleforge's Original Brewer") && names.includes('Friar Leo'), 'search also matches placement notes');
+  await page.fill('#q', 'bar in the forest');   // hint search
   names = await page.$$eval('#list .row .nm', n => n.map(x => x.textContent));
   assert.deepStrictEqual(names, ['Thorny Thicket']);
   await page.fill('#q', '');
@@ -243,7 +244,7 @@ async function gotoXZ(page, txt) {
   assert(await page.locator('#gridlabels div').count() > 20, 'grid labels drawn');
   await tilesLoaded(page);
   await page.screenshot({ path: path.join(OUT, 'laptop-grid.png') });
-  await page.locator('#list .row', { hasText: 'Providence' }).click();
+  await page.locator('#list .row[data-id="providence"]').click();
   await page.waitForTimeout(600);
   await tilesLoaded(page);
   await page.screenshot({ path: path.join(OUT, 'laptop-selected.png') });
@@ -270,7 +271,9 @@ async function gotoXZ(page, txt) {
   assert.deepStrictEqual(data.play, { x0: -3500, z0: -3500, x1: 3500, z1: 3500 });
   assert.strictEqual(data.locations.length, 2);
   data.locations.forEach(l => assert.deepStrictEqual(Object.keys(l), ['id', 'name', 'kind', 'difficulty', 'hint', 'x', 'z']));
-  assert.strictEqual(data.unplaced.length, 70);
+  assert.strictEqual(data.unplaced.length, 128);
+  assert.strictEqual(data.wishlistBatch, 2);
+  assert(data.unplaced.find(l => l.id === 'liquor-king-cemetery' && /Plindor/.test(l.note)), 'batch 2 notes exported');
   const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#exDownload')]);
   assert.strictEqual(dl.suggestedFilename(), 'locations.json');
   const dlText = fs.readFileSync(await dl.path(), 'utf8');
@@ -294,14 +297,58 @@ async function gotoXZ(page, txt) {
   await page.keyboard.press('Escape');
   step('start over, import from file, re-export is byte-identical');
 
+  // extra spots: a location can have several spots; they export, import back, and can be removed
+  await page.click('#list .row[data-id="providence"]');
+  await page.waitForTimeout(300);
+  await page.click('#editor [data-act="addspot"]');
+  assert.match(await page.textContent('#armName'), /another spot for Providence/);
+  const mc = await mapCenterPx(page);
+  await page.mouse.move(mc.x - 120, mc.y + 70);
+  const spotRead = await readout(page);
+  await page.mouse.click(mc.x - 120, mc.y + 70);
+  let prov = await loc(page, 'Providence');
+  assert.strictEqual(prov.alt.length, 1);
+  assert.strictEqual(fmt(prov.alt[0].x) + ', ' + fmt(prov.alt[0].z), spotRead, 'extra spot placed where the readout said');
+  assert.strictEqual(await page.locator('.leaflet-marker-icon.pin').filter({ hasText: '2' }).count(), 1, 'numbered pin for spot 2');
+  assert.match(await page.textContent('#editor .spots'), /Spots[\s\S]*1[\s\S]*2/);
+  await page.click('#exportBtn');
+  const withAlt = JSON.parse(await page.inputValue('#exportText'));
+  assert.deepStrictEqual(withAlt.locations.find(l => l.id === 'providence').alt, prov.alt);
+  await page.keyboard.press('Escape');
+  await page.click('#importBtn');
+  await page.fill('#imText', JSON.stringify(withAlt));
+  await page.click('#imGo');
+  assert.deepStrictEqual((await loc(page, 'Providence')).alt, prov.alt, 'alt survives import');
+  await page.click('#list .row[data-id="providence"]');
+  await page.click('#editor [data-rmspot="0"]');
+  assert.strictEqual((await loc(page, 'Providence')).alt.length, 0);
+  await page.keyboard.press('Control+z');
+  assert.strictEqual((await loc(page, 'Providence')).alt.length, 1, 'undo restores the removed spot');
+  await page.click('#editor [data-rmspot="0"]');
+  await page.keyboard.press('Escape');
+  step('extra spot: + Add another spot, numbered pin, export/import keep it, remove + undo');
+
   // a hand-made file without "unplaced" keeps the rest of the wishlist
   await page.click('#importBtn');
   await page.fill('#imText', JSON.stringify({ locations: [{ name: 'Providence', kind: 'town', difficulty: 'easy', x: 1, z: 2 }] }));
   await page.click('#imGo');
-  assert.strictEqual(await page.evaluate(() => window.placer.state.locations.length), 71);
+  assert.strictEqual(await page.evaluate(() => window.placer.state.locations.length), 129);
   await page.click('#undoBtn');
   assert.strictEqual(await page.evaluate(() => window.placer.state.locations.filter(l => l.x !== null).length), 2);
   step('minimal import keeps the wishlist; undo reverts the import');
+
+  // an old draft (before the lore picks) gets the 58 new wishlist entries merged in once
+  await page.evaluate(() => localStorage.setItem('pintland-placer-draft-v1', JSON.stringify({ meta: {}, play: {},
+    locations: [{ id: 'providence', name: 'Providence', kind: 'town', difficulty: 'easy', x: 1, z: 2 }] })));
+  await page.reload();
+  await tilesLoaded(page);
+  assert.strictEqual(await page.evaluate(() => window.placer.state.locations.length), 59);
+  await page.waitForFunction(() => /58 new wishlist locations/.test(document.getElementById('toast').textContent));
+  await page.waitForTimeout(700);
+  await page.reload();
+  await tilesLoaded(page);
+  assert.strictEqual(await page.evaluate(() => window.placer.state.locations.length), 59, 'merged only once');
+  step('an old draft gets the 58 lore picks merged in once');
 
   // pin check: a pin placed 480 blocks north of its real spot (in the mock's ocean) is flagged, and the 480-south
   // tile moves it onto land; a correct pin isn't flagged

@@ -21,6 +21,14 @@
   function fromLL(ll) { return { x: ll.lng, z: -ll.lat }; }
   function boxToBounds(b) { return L.latLngBounds(toLL(b.x0, b.z0), toLL(b.x1, b.z1)); }
   function dist(a, b) { var dx = a.x - b.x, dz = a.z - b.z; return Math.sqrt(dx * dx + dz * dz); }
+  /* A location is its main spot plus any extra spots in `alt` (several sewer entrances, two Tome Monuments...). */
+  function spots(loc) { return [{ x: loc.x, z: loc.z }].concat(loc.alt || []); }
+  /* The spot closest to p, and its distance: a guess scores against whichever spot it is nearest. */
+  function nearest(p, loc) {
+    var best = null;
+    spots(loc).forEach(function (s) { var d = dist(p, s); if (!best || d < best.d) best = { x: s.x, z: s.z, d: d }; });
+    return best;
+  }
 
   /* ---------- Dynmap tile layer (same URL scheme as getTileInfo/getTileName in Dynmap's own page) ---------- */
   function tileUrl(base, c) {
@@ -151,7 +159,7 @@
 
   global.PT = {
     NATIVE_ZOOM: NATIVE_ZOOM, MIN_ZOOM: MIN_ZOOM, MAX_ZOOM: MAX_ZOOM,
-    makeCRS: makeCRS, toLL: toLL, fromLL: fromLL, boxToBounds: boxToBounds, dist: dist,
+    makeCRS: makeCRS, toLL: toLL, fromLL: fromLL, boxToBounds: boxToBounds, dist: dist, spots: spots, nearest: nearest,
     tileBase: tileBase, tileUrl: tileUrl, makeTileLayer: makeTileLayer, makeMap: makeMap, lockTo: lockTo,
     DIFFS: DIFFS, score: score, verdict: verdict, tile: tile,
     mulberry32: mulberry32, shuffled: shuffled, bagPick: bagPick, pickDaily: pickDaily,

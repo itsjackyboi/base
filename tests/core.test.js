@@ -22,6 +22,12 @@ assert.strictEqual(s(200), 37); assert.strictEqual(s(500), 8);
 assert.strictEqual(PT.score(3, 5, 200), 100);   // a wider perfect radius still works if meta.scoring asks for one
 assert.strictEqual(PT.tile(85), '🟩'); assert.strictEqual(PT.tile(60), '🟨'); assert.strictEqual(PT.tile(30), '🟧'); assert.strictEqual(PT.tile(29), '🟥');
 
+// a location with extra spots scores against the closest one
+const sewer = { x: 0, z: 0, alt: [{ x: 300, z: 0 }, { x: 0, z: -200 }] };
+assert.deepStrictEqual(PT.nearest({ x: 290, z: 0 }, sewer), { x: 300, z: 0, d: 10 });
+assert.deepStrictEqual(PT.nearest({ x: 5, z: 5 }, { x: 0, z: 0 }).d, Math.hypot(5, 5));
+assert.strictEqual(PT.spots(sewer).length, 3);
+
 // puzzle numbering in America/New_York: #1 on the epoch, rolls over at midnight ET
 const tz = 'America/New_York', ep = '2026-10-24';
 assert.strictEqual(PT.puzzleNumber(tz, ep, new Date('2026-10-24T04:00:00Z')), 1);   // 00:00 EDT

@@ -73,6 +73,12 @@
   .field.wide { grid-column: 1 / -1; }
   .field label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
   .field input, .field select { background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 5px 7px; width: 100%; min-width: 0; }
+  .spots { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+  .spots-h { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .spots-h small { text-transform: none; letter-spacing: 0; color: var(--faint); }
+  .spot b { display: inline-block; width: 18px; color: var(--gold); }
+  .spots .btn { align-self: flex-start; margin-top: 2px; }
+  .row .note-line { color: var(--gold-dim); white-space: normal; }
   .ed-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .ed-actions .spacer { flex: 1; }
 
@@ -375,6 +381,70 @@
     ['John Rump', 'npc', 'hard'], ['Gale Derecho', 'npc', 'expert', 'Wind farmer'], ['Guster Derecho', 'npc', 'expert', 'Wind farmer']
   ];
 
+
+  // Wishlist batch 2: niche places picked from the lore docs. [name, kind, difficulty, hint, placement note]
+  var SEED2 = [
+    ['Aleforge Ale Fountain', 'landmark', 'medium', '', 'Lore: Aleforge town square, the spring the Brewmaster Deity blessed.'],
+    ['Aleforge Bazaar', 'building', 'hard', '', 'Lore: on one of the smaller islands next to Aleforge.'],
+    ['Aleforge Lighthouse & Customs Control', 'building', 'hard', '', 'Lore: on one of the smaller islands next to Aleforge.'],
+    ['Brewers Lane', 'landmark', 'expert', '', 'Lore: a street in Aleforge where brewing families have lived for generations.'],
+    ['Aleforge Sewers', 'other', 'expert', '', 'There are several entrances: place one, then use "+ Add another spot" for the rest. The closest one scores.'],
+    ["Salude Gonzalez's Attic Ladder", 'building', 'expert', '', 'Lore: the alley between the Krappenschitz Estate and Old Aleforge Municipal.'],
+    ["The Smugglers' Gallery", 'landmark', 'expert', '', 'Lore: along the cliffs of Aleforge.'],
+    ['Aleforge Jail', 'building', 'expert', '', 'Lore: somewhere in Aleforge (JP served time here for Peg Butt).'],
+    ['Liquor King Cemetery', 'other', 'expert', '', "Lore: Scab Plindor II's tombstone, with 'Liquor King' only softly carved."],
+    ["Dimitri's Grave", 'landmark', 'expert', '', "Lore: in John Cum's fields."],
+    ["Where Drake's Chalice Was Found", 'landmark', 'expert', '', "Lore: the forest at the end of the blood trail from Cum's house."],
+    ['Old Arena Site on Rum Ridge', 'landmark', 'expert', '', 'Lore: Rum Ridge, between Shanty Town and the Hoegaarden Plains.'],
+    ['La-Di-Da Street', 'landmark', 'expert', '', 'Place it at the entrance to the street (Shanty Town).'],
+    ['Shanty Square', 'landmark', 'hard', '', 'Lore: the square in Shanty Town.'],
+    ["The Disgruntled Farmer's Homestead", 'building', 'expert', '', 'Lore: deep in the Brandywine Brush.'],
+    ["Tomb of Aleforge's Original Brewer", 'building', 'expert', '', 'Lore: a small shrine deep within Fenwick.'],
+    ['The MAA Cave Lair', 'landmark', 'expert', '', 'Lore: a cave with an underground camp.'],
+    ['Spire of Patmos', 'building', 'medium', '', 'Lore: Providence.'],
+    ['Providence Lake Port', 'landmark', 'hard', '', "Lore: Providence's waterfront, built on stilts."],
+    ['Cardinal Circle', 'landmark', 'hard', '', "Lore: around the Cardinal's towers in Providence."],
+    ['Fianchetto Chess Bar', 'building', 'expert', '', 'Lore: Cardinal Circle, Providence.'],
+    ['Vanity Street', 'landmark', 'hard', '', 'Lore: Providence.'],
+    ['Jui Vuitton', 'building', 'expert', '', 'Lore: Vanity Street, Providence.'],
+    ['Buenacera Italian Restaurant', 'building', 'expert', '', 'Lore: Vanity Street, Providence.'],
+    ['The Big Ole Pipe', 'building', 'expert', '', "Lore: Pope's cigar shop (likely Providence)."],
+    ["Rachel Zlurs' Leather Shop", 'building', 'expert', '', 'Lore: down by the Providence Block Market.'],
+    ['The Theocrat', 'building', 'expert', '', 'Lore: Providence.'],
+    ["George O'Queef's Studio", 'building', 'expert', '', 'Lore: Providence.'],
+    ['Pintland Criminal Court', 'building', 'hard', '', 'Lore: Providence.'],
+    ["Malchus's House", 'building', 'expert', '', 'Lore: Providence.'],
+    ["Babu Packo's Island", 'landmark', 'hard', '', "Lore: a lonely island just off Providence's edge."],
+    ['The Stank Tank', 'building', 'hard', '', "Lore: Wagwan's sushi bar in Owe Block."],
+    ['Church of the Monk', 'building', 'hard', '', "Lore: Owe Block, by the water's edge."],
+    ['Owe Block Public Library', 'building', 'expert', '', 'Lore: Owe Block.'],
+    ['Owe Block Chronicle HQ', 'building', 'expert', '', 'Lore: Owe Block.'],
+    ["Bucket's Burgers", 'building', 'expert', '', "Lore: under Sexton Gobbler's posh manor, Owe Block."],
+    ['The Owe Block Brothel', 'building', 'expert', '', 'Lore: Owe Block.'],
+    ['Owe Block Treasury', 'building', 'expert', '', 'Lore: Owe Block.'],
+    ["Dig Dug's Mines", 'landmark', 'hard', '', 'Lore: the mines at the Basin at Bully Hill.'],
+    ["Mickey's Pipe Club", 'building', 'expert', '', 'Lore: Owe Block.'],
+    ['Vodkonia', 'landmark', 'medium', '', 'Lore: across the Gae Strait from the mainland.'],
+    ["Gideon Drake's Exile", 'npc', 'expert', 'Banished former mayor', 'Lore: the shores of Vodkonia.'],
+    ['The Mercury', 'landmark', 'hard', 'Cloudrunner sky ship', "Lore: near Roto Kaiishi, the Cloudrunners' haven."],
+    ['The Albatross', 'landmark', 'expert', 'Stormveil Trading Co. sky ship', 'Lore: not stated (its route passes the West Wind farm).'],
+    ['Hook Line & Sinker Submarine', 'landmark', 'expert', "Captain Crawdad's submarine", 'Lore: not stated.'],
+    ["The Bastard's Requiem", 'landmark', 'expert', "Jack Anqoak's ship", 'Lore: not stated.'],
+    ["The Alemaster's Mortar", 'landmark', 'expert', "Seamus Bonehardy's ship", 'Lore: not stated.'],
+    ['The Jolly Rammer', 'landmark', 'expert', "Guinnie's ship", 'Lore: not stated.'],
+    ['The Nethergate Portal', 'landmark', 'expert', '', 'Lore: inside Orchenk Manufactory.'],
+    ['The Tome Monument', 'landmark', 'expert', '', 'Two are known: place one, then use "+ Add another spot" for the other. The closest one scores.'],
+    ['Gregor Ashford', 'npc', 'hard', 'A drunken bard', 'Lore: the Gilded Tankard.'],
+    ['Friar Leo', 'npc', 'expert', 'Keeper of forbidden documents', "Lore: the Veilwalker shrine in Owe Block's Church of the Monk."],
+    ['Dig Dug', 'npc', 'hard', 'Foreman of the mines', 'Lore: the mines at the Basin at Bully Hill.'],
+    ['Aberama Bong', 'npc', 'expert', 'Shot-Chess moderator', 'Lore: the Fianchetto Chess Bar, Cardinal Circle.'],
+    ['Pope', 'npc', 'expert', 'Ex-mafia cigar lover', 'Lore: the Big Ole Pipe.'],
+    ['Hunk the Monk', 'npc', 'hard', "The Cardinal's bodyguard", "Lore: the streets around the Cardinal's towers, Providence."],
+    ['Vlad the Kisser', 'npc', 'expert', 'A struggling comedian', 'Lore: the Theocrat, Providence.'],
+    ['George Big Bush', 'npc', 'hard', 'Tavern owner', 'Lore: the Thorny Thicket, deep in the Brandywine Brush.']
+  ];
+  var WISHLIST_BATCH = 2;
+
   function slug(s) {
     return String(s).normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
       .replace(/&/g, ' and ').replace(/['’"]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'location';
@@ -384,32 +454,40 @@
     while (state.locations.some(function (l, i) { return i !== selfIdx && l.id === id; })) id = base + '-' + n++;
     return id;
   }
-  function seedLocations() {
-    var out = [];
-    SEED.forEach(function (s) {
-      out.push({ id: slug(s[0]), name: s[0], kind: s[1], difficulty: s[2], hint: s[3] || '', x: null, z: null, seed: true });
-    });
-    return out;
+  function seedRow(s) {
+    return { id: slug(s[0]), name: s[0], kind: s[1], difficulty: s[2], hint: s[3] || '', note: s[4] || '', x: null, z: null, alt: [], seed: true };
+  }
+  function seedLocations() { return SEED.concat(SEED2).map(seedRow); }
+  /* add wishlist batches newer than `from` that aren't in `locs` yet (by id), so new picks show up once in old drafts and files */
+  function mergeNewBatches(locs, from) {
+    if ((from || 1) >= 2) return 0;
+    var have = {}, n = 0;
+    locs.forEach(function (l) { have[l.id || slug(l.name)] = 1; });
+    SEED2.forEach(function (s) { if (!have[slug(s[0])]) { locs.push(seedRow(s)); n++; } });
+    return n;
   }
   var SEED_IDS = {};
-  SEED.forEach(function (s) { SEED_IDS[slug(s[0])] = 1; });
+  SEED.concat(SEED2).forEach(function (s) { SEED_IDS[slug(s[0])] = 1; });
 
   function normLoc(l, fallbackName) {
     var o = {
       id: l.id ? String(l.id) : '', name: String(l.name || fallbackName || '').trim(),
       kind: KINDS.indexOf(l.kind) >= 0 ? l.kind : 'other',
       difficulty: DIFFS.indexOf(l.difficulty) >= 0 ? l.difficulty : 'medium',
-      hint: l.hint ? String(l.hint) : '', x: null, z: null
+      hint: l.hint ? String(l.hint) : '', note: l.note ? String(l.note) : '', x: null, z: null, alt: []
     };
     if (isFinite(parseFloat(l.x)) && isFinite(parseFloat(l.z)) && l.x !== null && l.z !== null) {
       o.x = Math.floor(parseFloat(l.x)); o.z = Math.floor(parseFloat(l.z));
+      if (Array.isArray(l.alt)) l.alt.forEach(function (a) {
+        if (a && isFinite(parseFloat(a.x)) && isFinite(parseFloat(a.z))) o.alt.push({ x: Math.floor(parseFloat(a.x)), z: Math.floor(parseFloat(a.z)) });
+      });
     }
     o.seed = !!SEED_IDS[slug(o.name)];
     return o;
   }
 
   /* ================= state ================= */
-  var state = { meta: JSON.parse(JSON.stringify(DEFAULT_META)), play: Object.assign({}, DEFAULT_PLAY), locations: [] };
+  var state = { meta: JSON.parse(JSON.stringify(DEFAULT_META)), play: Object.assign({}, DEFAULT_PLAY), locations: [], wishlistBatch: WISHLIST_BATCH };
   var ui = { selected: null, armed: null, diffs: [], kinds: [], status: 'all', q: '', grid: false, names: false, view: null };
   var undoStack = [];
 
@@ -422,6 +500,8 @@
       state.play = Object.assign({}, DEFAULT_PLAY, d.play || {});
       state.locations = d.locations.map(function (l) { return normLoc(l); }).filter(function (l) { return l.name; });
       fixIds();
+      var added = mergeNewBatches(state.locations, d.wishlistBatch);
+      if (added) setTimeout(function () { toast(added + ' new wishlist locations added from your lore picks'); save(); }, 600);
     } else {
       state.locations = seedLocations();
     }
@@ -564,11 +644,11 @@
 
   /* pins */
   var markers = {};
-  function pinIcon(l) {
-    var sel = l.id === ui.selected;
+  function pinIcon(l, spot) {
+    var sel = l.id === ui.selected, glyph = spot ? String(spot) : GLYPH[l.kind];
     var svg = '<svg width="24" height="32" viewBox="0 0 24 32"><path d="M12 31C12 31 2 19.5 2 11.5a10 10 0 1 1 20 0C22 19.5 12 31 12 31Z" fill="' +
       COLOR[l.difficulty] + '" stroke="#15100d" stroke-width="1.5"/><text x="12" y="15.5" text-anchor="middle" font-size="11" font-weight="700" ' +
-      'font-family="system-ui,sans-serif" fill="#15100d">' + GLYPH[l.kind] + '</text></svg>';
+      'font-family="system-ui,sans-serif" fill="#15100d">' + glyph + '</text></svg>';
     return L.divIcon({ className: 'pin' + (sel ? ' sel' : ''), iconSize: [24, 32], iconAnchor: [12, 31], tooltipAnchor: [0, -30], html: '<div class="in">' + svg + '</div>' });
   }
   function renderPins() {
@@ -593,21 +673,35 @@
       });
       m.addTo(map);
       markers[l.id] = m;
+      (l.alt || []).forEach(function (a, i) {   // extra spots: numbered pins, draggable, part of the same location
+        var am = L.marker(blockCenter(a.x, a.z), { icon: pinIcon(l, i + 2), draggable: true, autoPan: true, riseOnHover: true,
+          zIndexOffset: l.id === ui.selected ? 900 : 0, title: '' });
+        am.bindTooltip(esc(l.name) + ' (spot ' + (i + 2) + ')', { className: 'pin-tip', direction: 'top', permanent: ui.names, offset: [0, 0] });
+        am.on('click', function (e) { if (ui.armed) { placeArmed(blockAt(e.latlng)); return; } select(l.id, false); });
+        am.on('drag', function (e) { showReadout(e.target.getLatLng()); });
+        am.on('dragend', function (e) {
+          var b = blockAt(e.target.getLatLng());
+          if (b.x === a.x && b.z === a.z) { e.target.setLatLng(blockCenter(b.x, b.z)); return; }
+          commit('move spot ' + (i + 2) + ' of ' + l.name, function () { var t = byId(l.id); t.alt[i] = { x: b.x, z: b.z }; ui.selected = l.id; });
+        });
+        am.addTo(map);
+        markers[l.id + '#' + (i + 2)] = am;
+      });
     });
   }
 
   /* arming: click a wishlist row (or add a custom location), then click the map */
-  function arm(id) {
+  function arm(id, extra) {
     var l = byId(id); if (!l) return;
-    ui.armed = id; ui.selected = id;
-    document.getElementById('armName').textContent = l.name;
+    ui.armed = id; ui.selected = id; ui.armExtra = !!extra;
+    document.getElementById('armName').textContent = extra ? 'another spot for ' + l.name : l.name;
     document.getElementById('armbar').classList.add('show');
     mapEl.classList.add('armed');
     closeDrawer();
     renderList(); renderEditor(); renderPins();
   }
   function disarm(quiet) {
-    ui.armed = null;
+    ui.armed = null; ui.armExtra = false;
     document.getElementById('armbar').classList.remove('show');
     mapEl.classList.remove('armed');
     if (!quiet) { renderList(); renderEditor(); }
@@ -616,7 +710,13 @@
     var id = ui.armed, l = byId(id);
     if (!l) return disarm();
     if (!inPlay(b)) { toast('That spot is outside the play area'); return; }
+    var extra = ui.armExtra && placed(l);
     disarm(true);
+    if (extra) {
+      commit('add a spot to ' + l.name, function () { l.alt = (l.alt || []).concat([{ x: b.x, z: b.z }]); ui.selected = id; });
+      toast('Added spot ' + (l.alt.length + 1) + ' for ' + l.name + ' at ' + fmt(b.x) + ', ' + fmt(b.z));
+      return;
+    }
     commit((placed(l) ? 'move ' : 'place ') + l.name, function () { l.x = b.x; l.z = b.z; ui.selected = id; });
     toast('Placed ' + l.name + ' at ' + fmt(b.x) + ', ' + fmt(b.z));
   }
@@ -648,7 +748,7 @@
     if (ui.kinds.length && ui.kinds.indexOf(l.kind) < 0) return false;
     if (ui.status === 'placed' && !placed(l)) return false;
     if (ui.status === 'unplaced' && placed(l)) return false;
-    if (ui.q) { var q = fold(ui.q); if (fold(l.name).indexOf(q) < 0 && fold(l.hint).indexOf(q) < 0) return false; }
+    if (ui.q) { var q = fold(ui.q); if (fold(l.name).indexOf(q) < 0 && fold(l.hint).indexOf(q) < 0 && fold(l.note || '').indexOf(q) < 0) return false; }
     return true;
   }
 
@@ -686,7 +786,8 @@
         html.push('<div class="row' + (l.id === ui.selected ? ' sel' : '') + (l.id === ui.armed ? ' armed' : '') + '" data-id="' + esc(l.id) + '">' +
           '<span class="st' + (p ? ' ok' : '') + '">' + (p ? '✓' : '○') + '</span>' +
           '<div class="main"><div class="nm">' + esc(l.name) + '</div><div class="sub">' + GLYPH[l.kind] + ' ' + l.kind +
-          (l.seed ? '' : ' · custom') + (p ? ' · ' + fmt(l.x) + ', ' + fmt(l.z) : '') + (l.hint ? ' · ' + esc(l.hint) : '') + '</div></div>' +
+          (l.seed ? '' : ' · custom') + (p ? ' · ' + fmt(l.x) + ', ' + fmt(l.z) : '') + (l.alt && l.alt.length ? ' · ' + (l.alt.length + 1) + ' spots' : '') +
+          (l.hint ? ' · ' + esc(l.hint) : '') + '</div>' + (l.note && !p ? '<div class="sub note-line">' + esc(l.note) + '</div>' : '') + '</div>' +
           (p ? '<button class="btn small mv" data-arm="' + esc(l.id) + '" title="Re-arm to move it">Move</button>' : '') +
           '<select data-diff="' + esc(l.id) + '" aria-label="Difficulty">' + opts(DIFFS, l.difficulty) + '</select>' +
           '<button class="del" data-del="' + esc(l.id) + '" title="Delete ' + esc(l.name) + '" aria-label="Delete ' + esc(l.name) + '">×</button></div>');
@@ -708,10 +809,18 @@
       '<div class="field wide"><label>Name</label><input data-f="name" value="' + esc(l.name) + '"></div>' +
       '<div class="field"><label>Kind</label><select data-f="kind">' + opts(KINDS, l.kind) + '</select></div>' +
       '<div class="field"><label>Difficulty</label><select data-f="difficulty">' + opts(DIFFS, l.difficulty) + '</select></div>' +
-      '<div class="field wide"><label>Hint</label><input data-f="hint" value="' + esc(l.hint) + '" placeholder="optional"></div>' +
+      '<div class="field wide"><label>Hint</label><input data-f="hint" value="' + esc(l.hint) + '" placeholder="optional, shown in the game"></div>' +
+      '<div class="field wide"><label>Placement note</label><input data-f="note" value="' + esc(l.note || '') + '" placeholder="optional, only shown here"></div>' +
       '<div class="field"><label>x</label><input data-f="x" type="number" step="1" value="' + (p ? l.x : '') + '" placeholder="unplaced"></div>' +
       '<div class="field"><label>z</label><input data-f="z" type="number" step="1" value="' + (p ? l.z : '') + '" placeholder="unplaced"></div>' +
-      '</div><div class="ed-actions">' +
+      '</div>' + (p ? '<div class="spots"><div class="spots-h">Spots <small>the game scores whichever is closest to the guess</small></div>' +
+        '<div class="spot"><b>1</b> ' + fmt(l.x) + ', ' + fmt(l.z) + '</div>' +
+        (l.alt || []).map(function (a, i) {
+          return '<div class="spot"><b>' + (i + 2) + '</b> ' + fmt(a.x) + ', ' + fmt(a.z) +
+            ' <button class="linkish" data-goto="' + i + '">show</button> <button class="linkish" data-rmspot="' + i + '">remove</button></div>';
+        }).join('') +
+        (ui.armed === l.id && ui.armExtra ? '' : '<button class="btn small" data-act="addspot">+ Add another spot</button>') + '</div>' : '') +
+      '<div class="ed-actions">' +
       (ui.armed === l.id ? '<button class="btn" data-act="cancel">Cancel placing</button>'
         : '<button class="btn primary" data-act="arm">' + (p ? 'Move on map' : 'Place on map') + '</button>') +
       (p ? '<button class="btn" data-act="show">Show</button><button class="btn" data-act="unplace">Unplace</button>' : '') +
@@ -795,13 +904,17 @@
   });
   editor.addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.target.blur(); });
   editor.addEventListener('click', function (e) {
+    var l0 = byId(ui.selected), rm = e.target.closest('[data-rmspot]'), gt = e.target.closest('[data-goto]');
+    if (l0 && rm) { var i = Number(rm.dataset.rmspot); commit('remove spot ' + (i + 2) + ' of ' + l0.name, function () { l0.alt.splice(i, 1); }); return; }
+    if (l0 && gt) { var a = l0.alt[Number(gt.dataset.goto)]; goTo(a.x, a.z, Math.max(map.getZoom(), 3)); return; }
     var b = e.target.closest('[data-act]'), l = byId(ui.selected); if (!b || !l) return;
     var act = b.dataset.act;
     if (act === 'arm') arm(l.id);
     else if (act === 'cancel') disarm();
     else if (act === 'show') select(l.id, true);
     else if (act === 'done') { disarm(true); ui.selected = null; renderAll(); }
-    else if (act === 'unplace') commit('unplace ' + l.name, function () { l.x = null; l.z = null; });
+    else if (act === 'unplace') commit('unplace ' + l.name, function () { l.x = null; l.z = null; l.alt = []; });
+    else if (act === 'addspot') arm(l.id, true);
     else if (act === 'delete') deleteLoc(l);
   });
   function deleteLoc(l) {
@@ -829,7 +942,7 @@
     e.preventDefault();
     var name = document.getElementById('adName').value.trim(); if (!name) return;
     var l = { id: '', name: name, kind: document.getElementById('adKind').value, difficulty: document.getElementById('adDiff').value,
-      hint: document.getElementById('adHint').value.trim(), x: null, z: null, seed: false };
+      hint: document.getElementById('adHint').value.trim(), note: '', x: null, z: null, alt: [], seed: false };
     closeModal(addModal);
     commit('add ' + name, function () { l.id = uniqueId(name, -1); state.locations.push(l); });
     arm(l.id);
@@ -838,7 +951,8 @@
   /* ================= import / export ================= */
   function cleanLoc(l, withPos) {
     var o = { id: l.id, name: l.name, kind: l.kind, difficulty: l.difficulty, hint: l.hint || '' };
-    if (withPos) { o.x = l.x; o.z = l.z; }
+    if (withPos) { o.x = l.x; o.z = l.z; if (l.alt && l.alt.length) o.alt = l.alt; }
+    if (l.note) o.note = l.note;
     return o;
   }
   function exportText() {
@@ -848,6 +962,7 @@
       .replace(/\[\n\s+([^\[\]{}]*?)\n\s*\]/g, function (m, inner) { return '[' + inner.replace(/,\n\s+/g, ', ') + ']'; });
     return '{\n  "meta": ' + meta.replace(/\n/g, '\n  ') +
       ',\n  "play": ' + JSON.stringify(state.play) +
+      ',\n  "wishlistBatch": ' + WISHLIST_BATCH +
       ',\n  "locations": ' + arr(pl, true) +
       ',\n  "unplaced": ' + arr(un, false) + '\n}\n';
   }
@@ -895,12 +1010,12 @@
     if (!hasUnplaced) {   // a hand-made file: keep the rest of the wishlist as unplaced
       var have = {}; all.forEach(function (l) { have[slug(l.name)] = 1; });
       seedLocations().forEach(function (s) { if (!have[s.id]) all.push(s); });
-    }
+    } else mergeNewBatches(all, data.wishlistBatch);   // a file from before a wishlist batch: add the new picks once
     var nPlaced = all.filter(placed).length;
     closeModal(importModal);
     disarm(true);
     commit('import', function () {
-      state.locations = all; fixIds();
+      state.locations = all; fixIds(); state.wishlistBatch = WISHLIST_BATCH;
       if (data && data.meta) state.meta = Object.assign({}, DEFAULT_META, data.meta);
       if (data && data.play) state.play = Object.assign({}, DEFAULT_PLAY, data.play);
       ui.selected = null;

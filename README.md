@@ -55,6 +55,12 @@ The draft autosaves to this browser's `localStorage`. Export often anyway: **Exp
   224, 480 and 992 blocks south. Before the zoom fix, zoomed-out views were drawn that far north, so a pin
   placed there is that far north of its real spot. Click the right close-up to move the pin, or mark it
   **Looks right**. Pins whose block looks like water are flagged and listed first.
+- **+ Add another spot** (in a placed location's editor) gives it extra spots, such as several sewer entrances or
+  both Tome Monuments. The game scores a guess against whichever spot is closest and shows the others faded.
+  Extra spots export as `"alt": [{"x": …, "z": …}]`.
+- **Placement note** is a reminder shown only in the placer (e.g. "place it at the entrance to the street").
+  It exports as `note`; the game ignores it. The 58 lore picks come with their lore clue as the note.
+- New wishlist batches merge into an older draft or an imported file once (tracked by `wishlistBatch`).
 - Delete a location with the × on its row, the Delete button in its editor, or the Delete key while it's
   selected.
 - Ctrl/⌘+Z undoes the last change (placing, moving, deleting, editing, importing).
