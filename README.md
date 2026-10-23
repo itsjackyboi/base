@@ -12,6 +12,7 @@ game/                 everything here is uploaded to plugins/dynmap/web/pintland
   vendor/leaflet/     Leaflet 1.9.4 (our own copy; Dynmap bundles 1.7.1)
 tools/mock_dynmap.py  local stand-in for Dynmap: serves game/ at /pintland/, fake tiles, /up/configuration
 tests/                core.test.js (unit), placer.e2e.js (Playwright)
+LORE-GAPS.md          running list of locations the lore docs miss or barely cover
 ```
 
 ## Deploy
