@@ -235,7 +235,7 @@ async function gotoXZ(page, txt) {
   const data = JSON.parse(exported);
   assert.strictEqual(data.meta.world, "Jack's Long Island Iced Tea (World 1)-2");
   assert.deepStrictEqual(data.meta.mix, ['easy', 'medium', 'medium', 'hard', 'expert']);
-  assert.deepStrictEqual(data.meta.scoring, { k: 200, perfect: 5 });
+  assert.deepStrictEqual(data.meta.scoring, { k: 200, perfect: 0 });
   assert.deepStrictEqual(data.play, { x0: -3500, z0: -3500, x1: 3500, z1: 3500 });
   assert.strictEqual(data.locations.length, 2);
   data.locations.forEach(l => assert.deepStrictEqual(Object.keys(l), ['id', 'name', 'kind', 'difficulty', 'hint', 'x', 'z']));

@@ -64,12 +64,12 @@
   }
 
   /* ---------- scoring ---------- */
-  /* One scale for every location: 100 within `perfect` blocks, then exponential falloff with scale k (blocks).
+  /* One scale for every location: 100 within `perfect` blocks (0 = the exact block, since guesses and answers are
+   * whole blocks), otherwise exponential falloff over the full distance with scale k (blocks), nothing subtracted.
    * k=200: 25 off -> 88, 50 -> 78, 100 -> 61, 200 -> 37, 500 -> 8. Tune k after play-testing. */
   function score(d, perfect, k) {
-    var over = Math.max(0, d - (perfect || 0));
-    if (over === 0) return 100;
-    return Math.min(99, Math.round(100 * Math.exp(-over / k)));
+    if (d <= (perfect || 0)) return 100;
+    return Math.min(99, Math.round(100 * Math.exp(-d / k)));
   }
   function verdict(s) {
     if (s >= 100) return 'Bullseye';

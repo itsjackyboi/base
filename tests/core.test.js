@@ -11,10 +11,12 @@ assert.strictEqual(PT.tileUrl(base, { x: 3, y: -2, z: 5 }), base + '0_0/3_1.jpg'
 assert.strictEqual(PT.tileUrl(base, { x: -1, y: 0, z: 4 }), base + '-1_-1/z_-2_-2.jpg');
 assert.strictEqual(PT.tileUrl(base, { x: 0, y: 0, z: 0 }), base + '0_-1/zzzzz_0_-32.jpg');
 
-// scoring examples from the spec (perfect 5, k 200)
-const s = d => PT.score(d, 5, 200);
-assert.strictEqual(s(0), 100); assert.strictEqual(s(5), 100);
-assert.strictEqual(s(25), 90); assert.strictEqual(s(100), 62); assert.strictEqual(s(200), 38); assert.strictEqual(s(500), 8);
+// scoring (perfect 0 = exact block only, k 200): nothing is subtracted from the distance
+const s = d => PT.score(d, 0, 200);
+assert.strictEqual(s(0), 100); assert.strictEqual(s(1), 99);
+assert.strictEqual(s(25), 88); assert.strictEqual(s(50), 78); assert.strictEqual(s(100), 61);
+assert.strictEqual(s(200), 37); assert.strictEqual(s(500), 8);
+assert.strictEqual(PT.score(3, 5, 200), 100);   // a wider perfect radius still works if meta.scoring asks for one
 assert.strictEqual(PT.tile(85), '🟩'); assert.strictEqual(PT.tile(60), '🟨'); assert.strictEqual(PT.tile(30), '🟧'); assert.strictEqual(PT.tile(29), '🟥');
 
 // puzzle numbering in America/New_York: #1 on the epoch, rolls over at midnight ET
