@@ -4,7 +4,7 @@ A running list of Pintland Tap locations that are missing from the two lore docs
 in conflict with them. The docs are THE PINTLAND ISLES - MASTER LORE COMPENDIUM and the HOEGAARDEN HALL
 OF RECORDS. The list is updated with each `locations.json` export. Tick an item once a doc covers it.
 
-Last checked: 2026-10-23, against the export with 108 placed and 48 unplaced locations.
+Last checked: 2026-10-24, against the export with 110 placed and 46 unplaced locations.
 
 ## Not in the lore at all
 
@@ -20,7 +20,6 @@ Placed in the game:
 - [ ] **The Golden Cowboy Casino**: Aleforge ("Wow I love gambling")
 - [ ] **The Place Beyond the Falls**: near Fenwick
 - [ ] **Sackbeard Stables**: by Sackbeard's Tavern
-- [ ] **Aleforge Controllers Office**: Aleforge (the docs mention "controllers" only as a TV's controllers)
 - [ ] **Windsunk Council Table**: the Windsunk Council exists in the lore, but nothing says where it meets
 - [ ] **Cardinal Addy's Quarters**: Providence (the only "quarters" in the docs is John Rump's letter)
 - [ ] **Kalifart Brewing Lab**: Providence (the Kalifarts appear as a group living "in lofty towers", but there is no lab)
@@ -92,4 +91,4 @@ for players who read the docs.
 - [ ] **Gregor Ashford**: the lore says he plays at the Gilded Tankard, but his pin is by Sackbeard's Tavern, about 280 blocks away. Move the pin or update the lore.
 - [ ] **Aleforge International Academy**: Jagerbauhm's speech puts it "by the Gilded Tankard", but the pin is at 640, 226, about 440 blocks away.
 - [ ] **O'Queef's Studio**: the lore has *George* O'Queef, the painter. The game now has *Oliver* O'queef's Studio.
-- [ ] **Hornithan Buttlube**: the lore says he holds the controller's office, which may be the new Aleforge Controllers Office. Linking them would fill both gaps.
+- [ ] **Aleforge Controllers Office vs. Old Aleforge Municipal**: the Compendium's Old Aleforge Municipal (OAM) houses the Comptroller's Office (Hornithan Buttlube), the Sheriff and the Color Guard captain. All three are pinned within 20 blocks of the Controllers Office, so it is almost certainly the OAM under a different name. Use one name in both places.
