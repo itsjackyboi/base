@@ -54,6 +54,14 @@
   #prompt { position: absolute; z-index: 850; top: calc(var(--top) + 10px); left: 50%; transform: translateX(-50%); width: min(520px, calc(100% - 20px));
     background: rgba(33,25,21,.95); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px 11px; text-align: center; box-shadow: 0 4px 18px rgba(0,0,0,.45); display: none; }
   #prompt.show { display: block; }
+  #prompt { overflow: hidden; }
+  #prompt .clock { color: var(--gold); font-weight: 700; text-transform: none; font-variant-numeric: tabular-nums; letter-spacing: 0; min-width: 2.6em; text-align: left; }
+  #prompt .clock.low { color: var(--red); }
+  #prompt .tbar { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,.06); }
+  #prompt .tbar i { display: block; height: 100%; width: 100%; background: var(--gold); transition: width .25s linear; }
+  #prompt .tbar i.low { background: var(--red); }
+  body:not(.guessing) #prompt .clock, body:not(.guessing) #prompt .tbar { visibility: hidden; }
+  @media (prefers-reduced-motion: reduce) { #prompt .tbar i { transition: none; } }
   #prompt .meta { font-size: 12px; color: var(--muted); letter-spacing: .4px; text-transform: uppercase; display: flex; justify-content: center; gap: 8px; align-items: center; }
   #prompt h2 { font-size: 25px; line-height: 1.2; margin: 3px 0 1px; }
   #prompt h2 span { color: var(--gold); }
@@ -152,9 +160,10 @@
 </header>
 
 <section id="prompt" aria-live="polite">
-  <div class="meta"><span id="pRound"></span><span class="diff" id="pDiff"></span></div>
+  <div class="meta"><span id="pRound"></span><span class="diff" id="pDiff"></span><span class="clock" id="pClock" aria-label="Seconds left"></span></div>
   <h2>Find <span id="pName"></span></h2>
   <div class="sub" id="pSub"></div>
+  <div class="tbar" aria-hidden="true"><i id="pBar"></i></div>
 </section>
 
 <section id="bar">
@@ -175,6 +184,7 @@
   <ul>
     <li>A name appears. <b>Tap the map</b> where you think it is. Tap again to move your guess.</li>
     <li>Pan and zoom as much as you like, then <b>Lock in</b>. A locked guess can't be changed.</li>
+    <li id="ruleTimer">You get <b id="ruleSecs">15 seconds</b> per guess. When time runs out, your guess locks in where it is, or the round scores 0 if you haven't placed one.</li>
     <li>Closer scores more: <b id="ruleScore">100 for the exact block.</b></li>
     <li>One puzzle a day, the same for everyone. It changes at midnight Eastern.</li>
   </ul>

@@ -11,6 +11,7 @@
   var data, meta, play, day, prog, map, N, pool;
   var phase = 'loading';          // start | guess | reveal | results | review
   var guess = null, guessMarker = null, layers = null;
+  var clockTimer = null;
 
   /* ---------------- helpers ---------------- */
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -48,8 +49,9 @@
   function init(d) {
     data = d;
     meta = Object.assign({ tz: 'America/New_York', epoch: '2026-10-24', mix: PT.DEFAULT_MIX,
-      scoring: { k: 200, perfect: 0 }, world: "Jack's Long Island Iced Tea (World 1)-2", mapName: 'flat' }, d.meta || {});
+      scoring: { k: 200, perfect: 0 }, timer: 15, world: "Jack's Long Island Iced Tea (World 1)-2", mapName: 'flat' }, d.meta || {});
     meta.scoring = Object.assign({ k: 200, perfect: 0 }, meta.scoring || {});
+    meta.timer = Math.max(0, Math.floor(+meta.timer) || 0);   // seconds per guess; 0 turns the clock off
     play = d.play || { x0: -3500, z0: -3500, x1: 3500, z1: 3500 };
     pool = (d.locations || []).filter(function (l) {
       return l && l.id && l.name && isFinite(l.x) && isFinite(l.z) && PT.DIFFS.indexOf(l.difficulty) >= 0;
@@ -70,9 +72,11 @@
     map.on('click', onMapClick);
 
     $('pno').textContent = day.label;
-    $('lockBtn').onclick = lockIn;
+    $('lockBtn').onclick = function () { lockIn(); };
     $('nextBtn').onclick = next;
     $('startBtn').onclick = function () { show('start', false); if (phase === 'start') startRound(); };
+    $('ruleTimer').style.display = meta.timer ? '' : 'none';
+    $('ruleSecs').textContent = plural(meta.timer, 'second');
     $('ruleScore').textContent = '100 for the exact block, ' + PT.score(25, meta.scoring.perfect, meta.scoring.k) + ' at 25 blocks off, ' +
       PT.score(100, meta.scoring.perfect, meta.scoring.k) + ' at 100.';
     $('helpBtn').onclick = function () { $('startBtn').textContent = phase === 'start' ? 'Play' : 'Back'; show('start', true); };
@@ -88,7 +92,7 @@
     renderTop();
     if (prog.rounds.length >= N) showResults();
     else if (prog.rounds.length > prog.ack) showReveal(prog.rounds.length - 1, false);   // reloaded on a reveal
-    else if (prog.rounds.length > 0) startRound();
+    else if (prog.rounds.length > 0 || prog.clock) startRound();   // mid-game, or reloaded during round 1: the clock kept running
     else { phase = 'start'; $('sKicker').textContent = day.no ? 'Puzzle ' + day.label : 'Preview · unlimited games'; show('start', true); }
   }
 
@@ -148,6 +152,37 @@
     setLock();
     map.fitBounds(PT.boxToBounds(play), { animate: i > 0 });
     renderTop();
+    startClock(i);
+  }
+
+  /* The round clock. Its start is saved, so a reload doesn't reset it; when it runs out, a placed guess locks in, otherwise the round scores 0. */
+  function startClock(i) {
+    clearTimeout(clockTimer);
+    $('pClock').style.display = $('pBar').parentNode.style.display = meta.timer ? '' : 'none';
+    if (!meta.timer) return;
+    if (!prog.clock || prog.clock.i !== i) { prog.clock = { i: i, t: Date.now() }; save(); }
+    tickClock();
+  }
+  function tickClock() {
+    clearTimeout(clockTimer);
+    if (phase !== 'guess' || !prog.clock) return;
+    var left = meta.timer * 1000 - (Date.now() - prog.clock.t);
+    var secs = Math.max(0, Math.ceil(left / 1000));
+    $('pClock').textContent = secs + 's';
+    $('pClock').classList.toggle('low', secs <= 5);
+    $('pBar').style.width = Math.max(0, Math.min(100, left / (meta.timer * 10))) + '%';
+    $('pBar').classList.toggle('low', secs <= 5);
+    if (left <= 0) return timeUp();
+    clockTimer = setTimeout(tickClock, Math.min(250, left));
+  }
+  function timeUp() {
+    if (phase !== 'guess') return;
+    if (guess) return lockIn(true);
+    var i = prog.rounds.length, l = prog.locs[i];
+    prog.rounds.push({ id: l.id, gx: null, gz: null, ax: l.x, az: l.z, d: null, s: 0, out: true });
+    save();
+    if (prog.rounds.length >= N) recordStats();
+    showReveal(i, true);
   }
   function setLock() {
     var b = $('lockBtn');
@@ -165,11 +200,14 @@
     setLock();
   }
 
-  function lockIn() {
+  function lockIn(auto) {
     if (phase !== 'guess' || !guess) return;
+    clearTimeout(clockTimer);
     var i = prog.rounds.length, l = prog.locs[i];
     var n = PT.nearest(guess, l), d = n.d, s = PT.score(d, meta.scoring.perfect, meta.scoring.k);   // closest spot counts
-    prog.rounds.push({ id: l.id, gx: guess.x, gz: guess.z, ax: n.x, az: n.z, d: Math.round(d * 10) / 10, s: s });
+    var r = { id: l.id, gx: guess.x, gz: guess.z, ax: n.x, az: n.z, d: Math.round(d * 10) / 10, s: s };
+    if (auto === true) r.out = true;          // the clock locked it in
+    prog.rounds.push(r);
     save();                                   // locked the instant it is made
     if (prog.rounds.length >= N) recordStats();
     showReveal(i, true);
@@ -182,11 +220,16 @@
   }
   function drawPair(l, r, label) {
     var ax = r.ax != null ? r.ax : l.x, az = r.az != null ? r.az : l.z;   // the spot this guess was scored against
-    var a = blockCenter(ax, az), g = blockCenter(r.gx, r.gz);
+    var a = blockCenter(ax, az), g = r.gx == null ? null : blockCenter(r.gx, r.gz);
     PT.spots(l).forEach(function (sp) {   // the location's other spots, faded
       if (sp.x === ax && sp.z === az) return;
       L.marker(blockCenter(sp.x, sp.z), { icon: answerIcon(l, true), interactive: false, keyboard: false, zIndexOffset: 400 }).addTo(layers);
     });
+    if (!g) {                                 // ran out of time without a guess: just the answer
+      L.marker(a, { icon: answerIcon(l), keyboard: false, zIndexOffset: 500 })
+        .bindTooltip(esc(l.name) + (label ? ' (' + label + ')' : ''), { className: 'lbl', direction: 'top', permanent: true, offset: [0, 0] }).addTo(layers);
+      return [a];
+    }
     L.polyline([g, a], { color: '#C9A84C', weight: 2.5, dashArray: '7 7', interactive: false }).addTo(layers);
     L.marker(g, { interactive: false, keyboard: false,
       icon: label ? L.divIcon({ className: '', iconSize: [20, 20], html: '<div class="num">' + label + '</div>' })
@@ -215,12 +258,13 @@
     $('lockBtn').style.display = 'none'; $('reveal').style.display = '';
     $('rScore').textContent = r.s;
     $('rScore').style.color = SQ_COLOR[PT.tile(r.s)];
-    $('rVerdict').textContent = PT.verdict(r.s);
-    var dd = Math.round(r.d);
-    $('rDist').textContent = r.d === 0 ? 'Exact block!' : plural(dd, 'block') + ' away';
+    $('rVerdict').textContent = r.gx == null ? 'Time\'s up' : PT.verdict(r.s);
+    $('rDist').textContent = r.gx == null ? 'No guess placed' : (r.d === 0 ? 'Exact block!' : plural(Math.round(r.d), 'block') + ' away') +
+      (r.out ? ' · locked in by the clock' : '');
     $('nextBtn').textContent = i + 1 >= N ? 'See results' : 'Next';
     var pts = drawPair(l, r);
-    fitPoints(pts);
+    if (pts.length < 2) map.setView(pts[0], 4, { animate: false });   // no guess: centre on the answer
+    else fitPoints(pts);
     renderTop();
     if (animate) $('nextBtn').focus({ preventScroll: true });
   }
@@ -276,8 +320,8 @@
     $('resSquares').textContent = prog.rounds.map(function (r) { return PT.tile(r.s); }).join('');
     $('resRounds').innerHTML = prog.rounds.map(function (r, i) {
       var l = prog.locs[i];
-      return '<tr><td class="n">' + (i + 1) + '</td><td class="nm">' + esc(l.name) + '<small>' + l.difficulty + ' · ' + PT.verdict(r.s) + '</small></td>' +
-        '<td class="d">' + (r.d === 0 ? 'exact' : plural(Math.round(r.d), 'block')) + '</td>' +
+      return '<tr><td class="n">' + (i + 1) + '</td><td class="nm">' + esc(l.name) + '<small>' + l.difficulty + ' · ' + (r.gx == null ? 'Time\'s up' : PT.verdict(r.s)) + '</small></td>' +
+        '<td class="d">' + (r.gx == null ? 'no guess' : r.d === 0 ? 'exact' : plural(Math.round(r.d), 'block')) + '</td>' +
         '<td class="s" style="color:' + SQ_COLOR[PT.tile(r.s)] + '">' + r.s + '</td></tr>';
     }).join('');
     $('shareText').textContent = shareText();

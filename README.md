@@ -41,6 +41,9 @@ their five; everyone else gets picks from the new file, so upload changes just a
   are within 50 blocks of each other (`meta.minGap`), so a building and its NPC never give each other away.
 - Guesses snap to whole blocks. Score = 100 for the exact block (`perfect: 0`), otherwise
   `round(100 · e^(−d/k))` capped at 99, with `k = 200`: 25 off → 88, 100 → 61, 200 → 37, 500 → 8.
+- Each guess has a 15-second clock (`meta.timer`, in seconds; `0` turns it off). When it runs out, a placed
+  guess locks in where it is; with no guess the round scores 0. The clock's start is saved, so a reload
+  doesn't reset it.
 - Each locked guess is saved to `localStorage` immediately; reloading can't re-guess. A finished day
   opens on results. Played / streak / best / average live in `localStorage` too (per browser).
 - The share text is the leaderboard: `Pintland Tap #12 — 372/500`, the squares, and the link.

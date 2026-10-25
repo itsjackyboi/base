@@ -9,7 +9,8 @@
     "scoring": {
       "k": 200,
       "perfect": 0
-    }
+    },
+    "timer": 15
   },
   "play": {"x0":-3500,"z0":-3500,"x1":3500,"z1":3500},
   "wishlistBatch": 4,

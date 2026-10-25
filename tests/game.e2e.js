@@ -20,10 +20,13 @@ async function tilesLoaded(page) {
   await page.waitForFunction(() => document.querySelectorAll('img.leaflet-tile-loaded').length > 2, null, { timeout: 15000 });
   await page.waitForTimeout(300);
 }
-async function newPage(ctx, iso) {
+/* timer: seconds per guess for this page. Most checks reload and wait between steps, so they run with the clock off (0). */
+async function newPage(ctx, iso, timer) {
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(e.message));
   await page.clock.setSystemTime(new Date(iso));   // time keeps flowing, so Leaflet's fades and pans finish
+  const d = JSON.parse(JSON.stringify(DATA)); d.meta.timer = timer || 0;
+  await page.route('**/pintland/locations.json', r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(d) }));
   return page;
 }
 const phase = page => page.evaluate(() => window.ptGame && window.ptGame.phase);
@@ -254,6 +257,7 @@ async function playRound(page, dx, dz, opts) {
   {
     const multi = JSON.parse(JSON.stringify(DATA));
     multi.locations.forEach(l => { l.alt = [{ x: l.x + 600, z: l.z }]; });   // every location gets a second spot 600 blocks east
+    multi.meta.timer = 0;
     const mctx = await browser.newContext({ viewport: { width: 1200, height: 800 } });
     const mp = await newPage(mctx, '2026-11-02T15:00:00Z');
     await mp.route('**/pintland/locations.json', r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(multi) }));
@@ -275,6 +279,58 @@ async function playRound(page, dx, dz, opts) {
     assert.strictEqual(await mp.textContent('#rDist'), '10 blocks away', 'main spot still scores when closer');
     await mctx.close();
     step('a location with two spots scores against whichever is closer and shows the other faded');
+  }
+
+  /* ---------------- the guess clock ---------------- */
+  {
+    console.log('guess clock (4 s here; locations.json sets 15)');
+    const tctx = await browser.newContext({ viewport: { width: 1200, height: 800 } });
+    const real = await newPage(tctx, '2026-11-05T15:00:00Z', DATA.meta.timer);
+    await real.goto(BASE);
+    await real.waitForSelector('#start.show');
+    assert.strictEqual(DATA.meta.timer, 15);
+    assert.strictEqual(await real.textContent('#ruleSecs'), '15 seconds', 'start card names the real clock');
+    await real.close();
+
+    const tp = await newPage(tctx, '2026-11-06T15:00:00Z', 4);
+    await tp.goto(BASE);
+    await tp.waitForSelector('#start.show');
+    await tp.click('#startBtn');
+    assert.match(await tp.textContent('#pClock'), /^[34]s$/);
+    // a placed but unlocked guess locks in when the clock runs out
+    const l0 = (await prog(tp)).locs[0];
+    await guessAt(tp, l0.x + 10, l0.z);
+    await tp.waitForFunction(() => window.ptGame.phase === 'reveal', null, { timeout: 8000 });
+    let r = (await prog(tp)).rounds[0];
+    assert(r.out && r.gx === l0.x + 10, 'guess locked in by the clock');
+    assert.match(await tp.textContent('#rDist'), /10 blocks away · locked in by the clock/);
+    await next(tp);
+    // no guess at all scores 0
+    await tp.waitForFunction(() => window.ptGame.phase === 'reveal', null, { timeout: 8000 });
+    r = (await prog(tp)).rounds[1];
+    assert.strictEqual(r.gx, null); assert.strictEqual(r.s, 0);
+    assert.strictEqual(await tp.textContent('#rScore'), '0');
+    assert.strictEqual(await tp.textContent('#rVerdict'), "Time's up");
+    assert.strictEqual(await tp.textContent('#rDist'), 'No guess placed');
+    await tilesLoaded(tp);
+    await tp.screenshot({ path: path.join(OUT, 'game-timeup.png') });
+    await next(tp);
+    // a reload doesn't reset the clock
+    await tp.waitForTimeout(2500);
+    await tp.reload();
+    await tp.waitForFunction(() => window.ptGame && window.ptGame.phase === 'guess');
+    assert(!(await tp.isVisible('#start.show')), 'reload mid-round goes straight back to the round');
+    assert.match(await tp.textContent('#pClock'), /^[12]s$/, 'clock kept running through the reload');
+    await tp.waitForFunction(() => window.ptGame.phase === 'reveal', null, { timeout: 5000 });
+    assert.strictEqual((await prog(tp)).rounds[2].s, 0);
+    await next(tp);
+    for (let i = 0; i < 2; i++) { await playRound(tp, 5, 0); await next(tp); }
+    await tp.waitForSelector('#results.show');
+    const rows = await tp.$$eval('#resRounds tr', t => t.map(x => x.textContent));
+    assert.match(rows[1], /Time's up/); assert.match(rows[1], /no guess/);
+    assert(!/Time's up/.test(rows[3]), 'locked rounds keep their verdict');
+    step('15 s on the start card; a placed guess locks in at 0 s, no guess scores 0, a reload keeps the clock');
+    await tctx.close();
   }
 
   /* ---------------- phone ---------------- */
