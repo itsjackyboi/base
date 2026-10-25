@@ -335,7 +335,7 @@
   var DEFAULT_META = {
     title: 'Pintland Tap',
     world: "Jack's Long Island Iced Tea (World 1)-2", mapName: 'flat',
-    tz: 'America/New_York', epoch: '2026-10-24',
+    tz: 'America/New_York', epoch: '',   // launch date of puzzle #1; empty keeps the game in preview
     mix: ['medium', 'hard', 'hard', 'expert', 'expert'],
     scoring: { k: 200, perfect: 0 },
     timer: 15
@@ -538,6 +538,7 @@
       var sc = state.meta.scoring;   // drafts from before the scoring change had perfect: 5
       if (sc && sc.k === 200 && sc.perfect === 5) state.meta.scoring = { k: 200, perfect: 0 };
       if (String(state.meta.mix) === 'easy,medium,medium,hard,expert') state.meta.mix = DEFAULT_META.mix.slice();   // old default: favour harder rounds
+      if (state.meta.epoch === '2026-10-24') state.meta.epoch = '';   // the first planned launch date; not launched yet
       state.play = Object.assign({}, DEFAULT_PLAY, d.play || {});
       state.locations = d.locations.map(function (l) { return normLoc(l); }).filter(function (l) { return l.name; });
       fixIds();

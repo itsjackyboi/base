@@ -32,10 +32,11 @@ their five; everyone else gets picks from the new file, so upload changes just a
 
 ## The game
 
-- One puzzle a day, the same for everyone: puzzle #1 is `meta.epoch` (2026-10-24), and it rolls over at
-  midnight in `meta.tz` (America/New_York). Days before the epoch play as an unnumbered "Preview" with
-  unlimited games: **Play again** on the results draws five new locations, and preview games don't count
-  toward stats. To get the preview back for more testing, move `meta.epoch` later in `locations.json`.
+- One puzzle a day, the same for everyone, rolling over at midnight in `meta.tz` (America/New_York).
+  Puzzle #1 is the date in `meta.epoch`. While `meta.epoch` is empty (`""`, the game isn't launched yet) every
+  day plays as an unnumbered "Preview", as do days before the epoch: **Play again** on the results draws five
+  new locations, and preview games don't count toward stats. To launch, set `meta.epoch` to the first day
+  (for example `"2026-11-01"`).
 - Five rounds following `meta.mix`, easiest first: 1 medium, 2 hard, 2 expert (the players know the map, so easy
   locations sit out). Picks don't repeat until a difficulty's pool is used up, and no two picks on the same day
   are within 50 blocks of each other (`meta.minGap`), so a building and its NPC never give each other away.

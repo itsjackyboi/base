@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var GAME_KEY = 'pt-game-v1-', STATS_KEY = 'pt-stats-v1';
+  var GAME_KEY = 'pt-game-v1-', STATS_KEY = 'pt-stats-v2';   // v2: stats from before launch are dropped
   var GLYPH = { town: 'T', building: 'B', landmark: 'L', npc: 'N', other: '•' };
   var SQ_COLOR = { '🟩': 'var(--green)', '🟨': 'var(--yellow)', '🟧': 'var(--orange)', '🟥': 'var(--red)' };
   var $ = function (id) { return document.getElementById(id); };
@@ -29,9 +29,12 @@
   function show(id, on) { $(id).classList.toggle('show', !!on); }
   function fail(msg) { $('oopsMsg').textContent = msg; show('oops', true); }
 
-  /* Today's puzzle in meta.tz. Days before the epoch are an unnumbered preview with their own picks. */
+  /* Today's puzzle in meta.tz. Days before the epoch, and every day while meta.epoch is empty (not launched yet),
+     are an unnumbered preview with their own picks and unlimited replays. */
   function today() {
-    var ymd = PT.ymd(meta.tz), n = Math.round((Date.parse(ymd + 'T00:00:00Z') - Date.parse(meta.epoch + 'T00:00:00Z')) / 86400000) + 1;
+    var ymd = PT.ymd(meta.tz), dayMs = Date.parse(ymd + 'T00:00:00Z');
+    if (!meta.epoch) return { ymd: ymd, no: 0, seedNo: 5000 + Math.round((dayMs - Date.parse('2026-01-01T00:00:00Z')) / 86400000), label: 'Preview' };
+    var n = Math.round((dayMs - Date.parse(meta.epoch + 'T00:00:00Z')) / 86400000) + 1;
     return n >= 1 ? { ymd: ymd, no: n, seedNo: n, label: '#' + n }
                   : { ymd: ymd, no: 0, seedNo: 5000 - n, label: 'Preview' };
   }
@@ -48,7 +51,7 @@
 
   function init(d) {
     data = d;
-    meta = Object.assign({ tz: 'America/New_York', epoch: '2026-10-24', mix: PT.DEFAULT_MIX,
+    meta = Object.assign({ tz: 'America/New_York', epoch: '', mix: PT.DEFAULT_MIX,
       scoring: { k: 200, perfect: 0 }, timer: 15, world: "Jack's Long Island Iced Tea (World 1)-2", mapName: 'flat' }, d.meta || {});
     meta.scoring = Object.assign({ k: 200, perfect: 0 }, meta.scoring || {});
     meta.timer = Math.max(0, Math.floor(+meta.timer) || 0);   // seconds per guess; 0 turns the clock off
@@ -60,7 +63,7 @@
 
     day = today();
     prog = PT.store.get(GAME_KEY + day.ymd, null);
-    if (!prog || !Array.isArray(prog.locs) || !prog.locs.length) { prog = newProg(day.seedNo, 1); save(); }
+    if (!prog || !Array.isArray(prog.locs) || !prog.locs.length || (prog.no || 0) !== day.no) { prog = newProg(day.seedNo, 1); save(); }   // also when today switched between preview and numbered
     N = prog.locs.length;
 
     map = PT.makeMap($('map'));
@@ -330,8 +333,8 @@
       .map(function (p) { return '<div><b>' + p[1] + '</b><span>' + p[0] + '</span></div>'; }).join('');
     $('againBtn').style.display = prog.no ? 'none' : '';
     $('previewNote').style.display = prog.no ? 'none' : '';
-    $('previewNote').textContent = 'Preview games don\'t count toward your stats. Puzzle #1 starts ' +
-      new Date(meta.epoch + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' }) + '.';
+    $('previewNote').textContent = 'Preview games don\'t count toward your stats. ' + (meta.epoch ? 'Puzzle #1 starts ' +
+      new Date(meta.epoch + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' }) + '.' : 'The daily puzzle hasn\'t launched yet.');
     renderTop();
     show('results', true);
     tick();

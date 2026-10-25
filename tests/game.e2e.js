@@ -20,12 +20,13 @@ async function tilesLoaded(page) {
   await page.waitForFunction(() => document.querySelectorAll('img.leaflet-tile-loaded').length > 2, null, { timeout: 15000 });
   await page.waitForTimeout(300);
 }
-/* timer: seconds per guess for this page. Most checks reload and wait between steps, so they run with the clock off (0). */
-async function newPage(ctx, iso, timer) {
+/* timer: seconds per guess for this page. Most checks reload and wait between steps, so they run with the clock off (0).
+   epoch: puzzle #1's date; the numbered-puzzle checks use Oct 24, '' is the real file's "not launched yet". */
+async function newPage(ctx, iso, timer, epoch) {
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(e.message));
   await page.clock.setSystemTime(new Date(iso));   // time keeps flowing, so Leaflet's fades and pans finish
-  const d = JSON.parse(JSON.stringify(DATA)); d.meta.timer = timer || 0;
+  const d = JSON.parse(JSON.stringify(DATA)); d.meta.timer = timer || 0; d.meta.epoch = epoch === undefined ? '2026-10-24' : epoch;
   await page.route('**/pintland/locations.json', r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(d) }));
   return page;
 }
@@ -257,7 +258,7 @@ async function playRound(page, dx, dz, opts) {
   {
     const multi = JSON.parse(JSON.stringify(DATA));
     multi.locations.forEach(l => { l.alt = [{ x: l.x + 600, z: l.z }]; });   // every location gets a second spot 600 blocks east
-    multi.meta.timer = 0;
+    multi.meta.timer = 0; multi.meta.epoch = '2026-10-24';
     const mctx = await browser.newContext({ viewport: { width: 1200, height: 800 } });
     const mp = await newPage(mctx, '2026-11-02T15:00:00Z');
     await mp.route('**/pintland/locations.json', r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(multi) }));
@@ -285,11 +286,14 @@ async function playRound(page, dx, dz, opts) {
   {
     console.log('guess clock (4 s here; locations.json sets 15)');
     const tctx = await browser.newContext({ viewport: { width: 1200, height: 800 } });
-    const real = await newPage(tctx, '2026-11-05T15:00:00Z', DATA.meta.timer);
+    const real = await newPage(tctx, '2026-11-05T15:00:00Z', DATA.meta.timer, DATA.meta.epoch);
     await real.goto(BASE);
     await real.waitForSelector('#start.show');
     assert.strictEqual(DATA.meta.timer, 15);
     assert.strictEqual(await real.textContent('#ruleSecs'), '15 seconds', 'start card names the real clock');
+    assert.strictEqual(DATA.meta.epoch, '', 'not launched yet');
+    assert.strictEqual(await real.textContent('#pno'), 'Preview', 'with no launch date every day is a preview');
+    assert.strictEqual(await real.textContent('#sKicker'), 'Preview · unlimited games');
     await real.close();
 
     const tp = await newPage(tctx, '2026-11-06T15:00:00Z', 4);

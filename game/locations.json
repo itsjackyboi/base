@@ -4,7 +4,7 @@
     "world": "Jack's Long Island Iced Tea (World 1)-2",
     "mapName": "flat",
     "tz": "America/New_York",
-    "epoch": "2026-10-24",
+    "epoch": "",
     "mix": ["medium", "hard", "hard", "expert", "expert"],
     "scoring": {
       "k": 200,
@@ -29,6 +29,7 @@
     {"id":"blodello-bridge","name":"Blodello Bridge","kind":"landmark","difficulty":"easy","hint":"","x":647,"z":-483},
     {"id":"john-cums-cumstead","name":"John Cum's Cumstead","kind":"building","difficulty":"easy","hint":"","x":429,"z":241},
     {"id":"brandywine-brush","name":"Brandywine Brush","kind":"landmark","difficulty":"medium","hint":"","x":640,"z":-59},
+    {"id":"rum-ridge","name":"Rum Ridge","kind":"landmark","difficulty":"medium","hint":"","x":626,"z":-232},
     {"id":"orchenk-manufactory","name":"Orchenk Manufactory","kind":"building","difficulty":"medium","hint":"The Factory","x":717,"z":768},
     {"id":"sodomire-gaol","name":"Sodomire Gaol","kind":"building","difficulty":"easy","hint":"","x":1192,"z":-644},
     {"id":"the-vanishing-house","name":"The Vanishing House","kind":"building","difficulty":"hard","hint":"The Mansion","x":113,"z":-397},
@@ -142,10 +143,11 @@
     {"id":"gayman-islands","name":"Gayman Islands","kind":"landmark","difficulty":"medium","hint":"","x":1278,"z":415},
     {"id":"john-delaney-grave","name":"John Delaney Grave","kind":"landmark","difficulty":"hard","hint":"","x":429,"z":253},
     {"id":"exavian-bonifords-wagon","name":"Exavian Boniford's Wagon","kind":"landmark","difficulty":"hard","hint":"","x":658,"z":-23},
-    {"id":"hoegaarden-plains-sewage-entrance","name":"Hoegaarden Plains Sewage Entrance","kind":"other","difficulty":"expert","hint":"","x":436,"z":-279}
+    {"id":"hoegaarden-plains-sewage-entrance","name":"Hoegaarden Plains Sewage Entrance","kind":"other","difficulty":"expert","hint":"","x":436,"z":-279},
+    {"id":"goldcoral-inc-aleforge-office","name":"Goldcoral Inc Aleforge Office","kind":"building","difficulty":"hard","hint":"","x":975,"z":-61},
+    {"id":"lkt-tutorial-house","name":"LKT Tutorial House","kind":"building","difficulty":"hard","hint":"","x":863,"z":376}
   ],
   "unplaced": [
-    {"id":"rum-ridge","name":"Rum Ridge","kind":"landmark","difficulty":"medium","hint":""},
     {"id":"dead-man-hallows","name":"Dead Man Hallows","kind":"landmark","difficulty":"hard","hint":""},
     {"id":"owe-block-veilwalker-shrine","name":"Owe Block Veilwalker Shrine","kind":"landmark","difficulty":"expert","hint":""},
     {"id":"sexton-gobblers-shrine","name":"Sexton Gobbler's Shrine","kind":"landmark","difficulty":"expert","hint":""},
@@ -157,7 +159,6 @@
     {"id":"the-smugglers-gallery","name":"The Smugglers' Gallery","kind":"landmark","difficulty":"expert","hint":"","note":"Lore: along the cliffs of Aleforge."},
     {"id":"la-di-da-street","name":"La-Di-Da Street","kind":"landmark","difficulty":"hard","hint":"","note":"Place it at the entrance to the street (Shanty Town)."},
     {"id":"the-disgruntled-farmers-homestead","name":"The Disgruntled Farmer's Homestead","kind":"building","difficulty":"expert","hint":"","note":"Lore: deep in the Brandywine Brush."},
-    {"id":"spire-of-patmos","name":"Spire of Patmos","kind":"building","difficulty":"medium","hint":"","note":"Lore: Providence."},
     {"id":"rachel-zlurs-leather-shop","name":"Rachel Zlurs' Leather Shop","kind":"building","difficulty":"hard","hint":"","note":"Lore: down by the Providence Block Market."},
     {"id":"church-of-the-monk","name":"Church of the Monk","kind":"building","difficulty":"hard","hint":"","note":"Lore: Owe Block, by the water's edge."},
     {"id":"owe-block-public-library","name":"Owe Block Public Library","kind":"building","difficulty":"medium","hint":"","note":"Lore: Owe Block."},
