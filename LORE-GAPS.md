@@ -4,7 +4,7 @@ A running list of Pintland Tap locations that are missing from the two lore docs
 in conflict with them. The docs are THE PINTLAND ISLES - MASTER LORE COMPENDIUM and the HOEGAARDEN HALL
 OF RECORDS. The list is updated with each `locations.json` export. Tick an item once a doc covers it.
 
-Last checked: 2026-10-24, against the export with 110 placed and 46 unplaced locations.
+Last checked: 2026-10-25, against the export with 128 placed and 36 unplaced locations.
 
 ## Not in the lore at all
 
@@ -24,17 +24,23 @@ Placed in the game:
 - [ ] **Cardinal Addy's Quarters**: Providence (the only "quarters" in the docs is John Rump's letter)
 - [ ] **Kalifart Brewing Lab**: Providence (the Kalifarts appear as a group living "in lofty towers", but there is no lab)
 - [ ] **Aleforge Embassy**: Providence. The lore only has the *Hoegaarden Library Embassy*, where the Kings hid during the Owe Block chase. Say whether these are the same place.
-
-On the wishlist, not placed yet:
-
-- [ ] **The Hog's Hog**: tavern in the sewers
-- [ ] **Beer Below**: tavern in Owe Block
-- [ ] **Head Bar**: tavern in Shanty Town
-- [ ] **Bar Boosy**: tavern, possibly in Aleforge
+- [ ] **The Hog's Hog**: tavern "in the sewers", pinned in Owe Block
 - [ ] **Daori Gerrell**: travel inn and brewery between Shanty Town and Providence
 - [ ] **Hermes Foot**: tavern
 - [ ] **Sapwell Tavern**: tavern
-- [ ] **Fenwick Bell Shrine**: the docs mention shrines in general, but not this one
+- [ ] **The Cathedral**: north of Providence (the Church of Patmos?)
+- [ ] **The Soccer Stadium**: far west, past the Breakback Mountains
+- [ ] **Drunken Trials Stadium**: far north, about 1,790 blocks from Aleforge. The lore says the Trials take over Aleforge itself; is this the arena that was torn down on Rum Ridge "with plans to rebuild elsewhere"?
+- [ ] **Craftganistan**: far south, past the Wildlands
+- [ ] **Gayman Islands**: south-east, out at sea
+- [ ] **Exavian Boniford's Wagon**: in the Brandywine Brush
+- [ ] **Hoegaarden Plains Sewage Entrance**: on the Hoegaarden Plains, about 120 blocks from the library
+
+On the wishlist, not placed yet:
+
+- [ ] **Beer Below**: tavern in Owe Block
+- [ ] **Head Bar**: tavern in Shanty Town
+- [ ] **Bar Boosy**: tavern, possibly in Aleforge
 
 ## Heading only, or a single passing line
 
@@ -67,6 +73,7 @@ One-liners or passing mentions:
 - [ ] **Jui Vuitton** and **Buenacera Italian Restaurant**: one mention each, in Pope's entry
 - [ ] **Malchus's House**: Malchus appears in one report. Nothing says where he lived.
 - [ ] **Hunk the Monk**: one line
+- [ ] **Last Walk of Shame Group Build**: the Walk of Shame is in the Hall of Records (the Kings' journey to Pintland), but the build isn't
 
 ## In the story, but the lore never says where
 
@@ -84,6 +91,7 @@ for players who read the docs.
 - [ ] **The Albatross** and **Hook Line & Sinker Submarine**: the lore describes both vessels but never says where they sit
 - [ ] **The Bastard's Requiem**: no location given
 - [ ] **Aleforge International Academy for Aspiring Drinkers** and **CUMsock's Zoo**: both were only campaign promises. Say if they got built.
+- [ ] **John Delaney Grave**: the Compendium lists John Delaney as deceased, next to John Cum, but never says where he's buried (pinned 12 blocks from the Cumstead)
 
 ## Lore and map disagree
 
