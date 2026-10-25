@@ -145,7 +145,8 @@
     {"id":"exavian-bonifords-wagon","name":"Exavian Boniford's Wagon","kind":"landmark","difficulty":"hard","hint":"","x":658,"z":-23},
     {"id":"hoegaarden-plains-sewage-entrance","name":"Hoegaarden Plains Sewage Entrance","kind":"other","difficulty":"expert","hint":"","x":436,"z":-279},
     {"id":"goldcoral-inc-aleforge-office","name":"Goldcoral Inc Aleforge Office","kind":"building","difficulty":"hard","hint":"","x":975,"z":-61},
-    {"id":"lkt-tutorial-house","name":"LKT Tutorial House","kind":"building","difficulty":"hard","hint":"","x":863,"z":376}
+    {"id":"lkt-tutorial-house","name":"LKT Tutorial House","kind":"building","difficulty":"hard","hint":"","x":863,"z":376},
+    {"id":"where-the-rotted-soul-was-defeated","name":"Where the Rotted Soul was Defeated","kind":"landmark","difficulty":"expert","hint":"Were you listening during HIH?","x":1527,"z":2457}
   ],
   "unplaced": [
     {"id":"dead-man-hallows","name":"Dead Man Hallows","kind":"landmark","difficulty":"hard","hint":""},
