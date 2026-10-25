@@ -153,7 +153,7 @@ async function playRound(page, dx, dz, opts) {
 
   await page.click('#reviewBtn');
   assert.strictEqual(await page.locator('.num').count(), 5);
-  assert.strictEqual(await page.locator('.ans').count(), 5);
+  assert.strictEqual(await page.locator('.ans:not(.faint)').count(), 5, 'one scored answer per round (other spots of multi-spot places are faded)');
   await tilesLoaded(page);
   await page.screenshot({ path: path.join(OUT, 'game-review.png') });
   await page.click('#backBtn');
