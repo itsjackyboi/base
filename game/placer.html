@@ -335,10 +335,9 @@
   var DEFAULT_META = {
     title: 'Pintland Tap',
     world: "Jack's Long Island Iced Tea (World 1)-2", mapName: 'flat',
-    tz: 'America/New_York', epoch: '',   // launch date of puzzle #1; empty keeps the game in preview
-    mix: ['medium', 'hard', 'hard', 'expert', 'expert'],
+    tz: 'America/New_York', epoch: '2026-10-26',   // puzzle #1
     scoring: { k: 200, perfect: 0 },
-    timer: 15
+    timer: 10
   };
   var DEFAULT_PLAY = { x0: -3500, z0: -3500, x1: 3500, z1: 3500 };
 
@@ -537,8 +536,9 @@
       state.meta = Object.assign({}, DEFAULT_META, d.meta || {});
       var sc = state.meta.scoring;   // drafts from before the scoring change had perfect: 5
       if (sc && sc.k === 200 && sc.perfect === 5) state.meta.scoring = { k: 200, perfect: 0 };
-      if (String(state.meta.mix) === 'easy,medium,medium,hard,expert') state.meta.mix = DEFAULT_META.mix.slice();   // old default: favour harder rounds
-      if (state.meta.epoch === '2026-10-24') state.meta.epoch = '';   // the first planned launch date; not launched yet
+      delete state.meta.mix;   // the game now picks any difficulty, easiest first, at most two of each
+      if (!state.meta.epoch || state.meta.epoch === '2026-10-24') state.meta.epoch = DEFAULT_META.epoch;   // launched Oct 26
+      if (state.meta.timer === 15) state.meta.timer = DEFAULT_META.timer;   // the clock went from 15 to 10 seconds
       state.play = Object.assign({}, DEFAULT_PLAY, d.play || {});
       state.locations = d.locations.map(function (l) { return normLoc(l); }).filter(function (l) { return l.name; });
       fixIds();
@@ -1059,6 +1059,7 @@
     commit('import', function () {
       state.locations = all; fixIds(); state.wishlistBatch = WISHLIST_BATCH;
       if (data && data.meta) state.meta = Object.assign({}, DEFAULT_META, data.meta);
+      delete state.meta.mix;
       if (data && data.play) state.play = Object.assign({}, DEFAULT_PLAY, data.play);
       ui.selected = null;
     });

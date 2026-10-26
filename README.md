@@ -7,6 +7,7 @@ game/                 everything here is uploaded to plugins/dynmap/web/pintland
   index.html          the daily game: http://51.161.71.220:8128/pintland/index.html
   js/game.js          game flow: rounds, reveal, results, stats
   locations.json      the locations the game picks from (export from the placer)
+  related.json        groups of lore-related locations that never share a day
   placer.html         place every location, export locations.json
   js/core.js          CRS, Dynmap tile layer, scoring, daily picks, storage
   vendor/leaflet/     Leaflet 1.9.4 (our own copy; Dynmap bundles 1.7.1)
@@ -33,16 +34,16 @@ their five; everyone else gets picks from the new file, so upload changes just a
 ## The game
 
 - One puzzle a day, the same for everyone, rolling over at midnight in `meta.tz` (America/New_York).
-  Puzzle #1 is the date in `meta.epoch`. While `meta.epoch` is empty (`""`, the game isn't launched yet) every
-  day plays as an unnumbered "Preview", as do days before the epoch: **Play again** on the results draws five
-  new locations, and preview games don't count toward stats. To launch, set `meta.epoch` to the first day
-  (for example `"2026-11-01"`).
-- Five rounds following `meta.mix`, easiest first: 1 medium, 2 hard, 2 expert (the players know the map, so easy
-  locations sit out). Picks don't repeat until a difficulty's pool is used up, and no two picks on the same day
-  are within 50 blocks of each other (`meta.minGap`), so a building and its NPC never give each other away.
+  Puzzle #1 was `meta.epoch` (2026-10-26). There is no practice mode or replay.
+- Five rounds from all placed locations, any difficulty, easiest first, so the difficulty never steps down, and
+  never more than two of one difficulty in a game. Each day uses one of the 16 ways to split five rounds that way
+  (each comes up once every 16 days). Within a difficulty, picks don't repeat until its pool is used up.
+- `related.json` lists groups of locations that are related in the lore (a building and its owner, a story's
+  places, things on the same block). No two locations from one group are picked on the same day. Locations that
+  are merely close together can share a day. Edit the groups by hand; the placer never touches this file.
 - Guesses snap to whole blocks. Score = 100 for the exact block (`perfect: 0`), otherwise
   `round(100 · e^(−d/k))` capped at 99, with `k = 200`: 25 off → 88, 100 → 61, 200 → 37, 500 → 8.
-- Each guess has a 15-second clock (`meta.timer`, in seconds; `0` turns it off). When it runs out, a placed
+- Each guess has a 10-second clock (`meta.timer`, in seconds; `0` turns it off). When it runs out, a placed
   guess locks in where it is; with no guess the round scores 0. The clock's start is saved, so a reload
   doesn't reset it.
 - Each locked guess is saved to `localStorage` immediately; reloading can't re-guess. A finished day

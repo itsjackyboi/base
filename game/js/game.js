@@ -8,7 +8,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var TAP = window.matchMedia && window.matchMedia('(hover: none)').matches ? 'Tap' : 'Click';
 
-  var data, meta, play, day, prog, map, N, pool;
+  var data, meta, play, day, prog, map, N, pool, related = [];
   var phase = 'loading';          // start | guess | reveal | results | review
   var guess = null, guessMarker = null, layers = null;
   var clockTimer = null;
@@ -29,30 +29,34 @@
   function show(id, on) { $(id).classList.toggle('show', !!on); }
   function fail(msg) { $('oopsMsg').textContent = msg; show('oops', true); }
 
-  /* Today's puzzle in meta.tz. Days before the epoch, and every day while meta.epoch is empty (not launched yet),
-     are an unnumbered preview with their own picks and unlimited replays. */
+  /* Today's puzzle number in meta.tz: #1 on meta.epoch. Before then there is no puzzle (n < 1). */
   function today() {
-    var ymd = PT.ymd(meta.tz), dayMs = Date.parse(ymd + 'T00:00:00Z');
-    if (!meta.epoch) return { ymd: ymd, no: 0, seedNo: 5000 + Math.round((dayMs - Date.parse('2026-01-01T00:00:00Z')) / 86400000), label: 'Preview' };
-    var n = Math.round((dayMs - Date.parse(meta.epoch + 'T00:00:00Z')) / 86400000) + 1;
-    return n >= 1 ? { ymd: ymd, no: n, seedNo: n, label: '#' + n }
-                  : { ymd: ymd, no: 0, seedNo: 5000 - n, label: 'Preview' };
+    var ymd = PT.ymd(meta.tz), n = Math.round((Date.parse(ymd + 'T00:00:00Z') - Date.parse(meta.epoch + 'T00:00:00Z')) / 86400000) + 1;
+    return { ymd: ymd, no: n, seedNo: n, label: '#' + n };
   }
+  function longDate(ymd) { return new Date(ymd + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' }); }
 
   /* ---------------- boot ---------------- */
   fetch('/up/configuration', { credentials: 'same-origin', cache: 'no-store' })
     .then(function (r) { return r.json(); })
     .then(function (c) { if (c && c.error === 'login-required') { show('login', true); throw 'login'; } })
     .catch(function (e) { if (e === 'login') throw e; /* Dynmap unreachable: try anyway */ })
-    .then(function () { return fetch('locations.json', { cache: 'no-cache' }); })
-    .then(function (r) { if (!r.ok) throw new Error('locations.json: HTTP ' + r.status); return r.json(); })
-    .then(init)
+    .then(function () {
+      return Promise.all([
+        fetch('locations.json', { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error('locations.json: HTTP ' + r.status); return r.json(); }),
+        fetch('related.json', { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })   // optional
+      ]);
+    })
+    .then(function (res) {
+      related = (res[1] && res[1].groups || []).map(function (g) { return g.ids || g; }).filter(Array.isArray);
+      init(res[0]);
+    })
     .catch(function (e) { if (e !== 'login') fail(e && e.message ? e.message : String(e)); });
 
   function init(d) {
     data = d;
-    meta = Object.assign({ tz: 'America/New_York', epoch: '', mix: PT.DEFAULT_MIX,
-      scoring: { k: 200, perfect: 0 }, timer: 15, world: "Jack's Long Island Iced Tea (World 1)-2", mapName: 'flat' }, d.meta || {});
+    meta = Object.assign({ tz: 'America/New_York', epoch: '',
+      scoring: { k: 200, perfect: 0 }, timer: 10, world: "Jack's Long Island Iced Tea (World 1)-2", mapName: 'flat' }, d.meta || {});
     meta.scoring = Object.assign({ k: 200, perfect: 0 }, meta.scoring || {});
     meta.timer = Math.max(0, Math.floor(+meta.timer) || 0);   // seconds per guess; 0 turns the clock off
     play = d.play || { x0: -3500, z0: -3500, x1: 3500, z1: 3500 };
@@ -61,9 +65,11 @@
     });
     if (pool.length < 1) return fail('locations.json has no placed locations yet.');
 
+    if (!/^\d{4}-\d\d-\d\d$/.test(meta.epoch || '')) return fail('locations.json has no launch date (meta.epoch).');
     day = today();
+    if (day.no < 1) return fail('Pintland Tap starts on ' + longDate(meta.epoch) + '. Come back then!');
     prog = PT.store.get(GAME_KEY + day.ymd, null);
-    if (!prog || !Array.isArray(prog.locs) || !prog.locs.length || (prog.no || 0) !== day.no) { prog = newProg(day.seedNo, 1); save(); }   // also when today switched between preview and numbered
+    if (!prog || !Array.isArray(prog.locs) || !prog.locs.length || prog.no !== day.no) { prog = newProg(day.seedNo); save(); }   // also replaces a pre-launch preview game
     N = prog.locs.length;
 
     map = PT.makeMap($('map'));
@@ -86,7 +92,6 @@
     $('reviewBtn').onclick = review;
     $('backBtn').onclick = showResults;
     $('copyBtn').onclick = copyShare;
-    $('againBtn').onclick = playAgain;
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
       if (phase === 'guess' && guess) lockIn(); else if (phase === 'reveal') next();
@@ -96,31 +101,17 @@
     if (prog.rounds.length >= N) showResults();
     else if (prog.rounds.length > prog.ack) showReveal(prog.rounds.length - 1, false);   // reloaded on a reveal
     else if (prog.rounds.length > 0 || prog.clock) startRound();   // mid-game, or reloaded during round 1: the clock kept running
-    else { phase = 'start'; $('sKicker').textContent = day.no ? 'Puzzle ' + day.label : 'Preview · unlimited games'; show('start', true); }
+    else { phase = 'start'; $('sKicker').textContent = 'Puzzle ' + day.label; show('start', true); }
   }
 
   /* Freeze a game's picks (with their positions) so a mid-day edit to locations.json can't change a game in progress. */
-  function newProg(seedNo, attempt) {
-    var picks = PT.pickDaily({ meta: meta, locations: pool }, seedNo);
-    return { ymd: day.ymd, no: day.no, label: day.label, attempt: attempt, ack: 0, rounds: [], locs: picks.map(function (l) {
+  function newProg(seedNo) {
+    var picks = PT.pickDaily({ meta: meta, locations: pool, related: related }, seedNo);
+    return { ymd: day.ymd, no: day.no, label: day.label, ack: 0, rounds: [], locs: picks.map(function (l) {
       return { id: l.id, name: l.name, kind: l.kind || 'other', difficulty: l.difficulty, hint: l.hint || '', x: Math.floor(l.x), z: Math.floor(l.z),
         alt: (Array.isArray(l.alt) ? l.alt : []).filter(function (a) { return a && isFinite(a.x) && isFinite(a.z); })
           .map(function (a) { return { x: Math.floor(a.x), z: Math.floor(a.z) }; }) };
     }) };
-  }
-
-  /* Preview days only: start another game with fresh picks, avoiding the last game's locations where the pool allows. */
-  function playAgain() {
-    if (prog.no) return;
-    var last = {}, best = null, bestOverlap = Infinity;
-    prog.locs.forEach(function (l) { last[l.id] = 1; });
-    for (var t = 0; t < 30 && bestOverlap > 0; t++) {
-      var p = newProg(10000 + Math.floor(Math.random() * 1e6), (prog.attempt || 1) + 1);
-      var overlap = p.locs.filter(function (l) { return last[l.id]; }).length;
-      if (overlap < bestOverlap) { best = p; bestOverlap = overlap; }
-    }
-    prog = best; N = prog.locs.length; save();
-    startRound();
   }
 
   function save() {
@@ -290,7 +281,6 @@
   }
 
   function recordStats() {
-    if (!prog.no) return;                     // preview games don't count
     var st = PT.store.get(STATS_KEY, { days: {} });
     st.days = st.days || {};
     st.days[prog.ymd] = { no: prog.no, total: totals() };
@@ -318,7 +308,7 @@
     show('prompt', false); show('bar', false); show('reviewBar', false); show('start', false);
     layers.clearLayers();
     map.fitBounds(PT.boxToBounds(play), { animate: false });
-    $('resKicker').textContent = prog.no ? 'Puzzle ' + prog.label : 'Preview · game ' + (prog.attempt || 1);
+    $('resKicker').textContent = 'Puzzle ' + prog.label;
     $('resTotal').textContent = totals();
     $('resSquares').textContent = prog.rounds.map(function (r) { return PT.tile(r.s); }).join('');
     $('resRounds').innerHTML = prog.rounds.map(function (r, i) {
@@ -331,10 +321,6 @@
     var s = stats();
     $('stats').innerHTML = [['Played', s.played], ['Streak', s.streak], ['Best streak', s.best], ['Average', s.avg]]
       .map(function (p) { return '<div><b>' + p[1] + '</b><span>' + p[0] + '</span></div>'; }).join('');
-    $('againBtn').style.display = prog.no ? 'none' : '';
-    $('previewNote').style.display = prog.no ? 'none' : '';
-    $('previewNote').textContent = 'Preview games don\'t count toward your stats. ' + (meta.epoch ? 'Puzzle #1 starts ' +
-      new Date(meta.epoch + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' }) + '.' : 'The daily puzzle hasn\'t launched yet.');
     renderTop();
     show('results', true);
     tick();

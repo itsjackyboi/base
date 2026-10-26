@@ -21,7 +21,7 @@ async function tilesLoaded(page) {
   await page.waitForTimeout(300);
 }
 /* timer: seconds per guess for this page. Most checks reload and wait between steps, so they run with the clock off (0).
-   epoch: puzzle #1's date; the numbered-puzzle checks use Oct 24, '' is the real file's "not launched yet". */
+   epoch: puzzle #1's date; the numbered-puzzle checks use Oct 24 (the real file launched Oct 26). */
 async function newPage(ctx, iso, timer, epoch) {
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(e.message));
@@ -71,12 +71,15 @@ async function playRound(page, dx, dz, opts) {
   await tilesLoaded(page);
   await page.screenshot({ path: path.join(OUT, 'game-start.png') });
   let p = await prog(page);
-  assert.deepStrictEqual(p.locs.map(l => l.difficulty), ['medium', 'hard', 'hard', 'expert', 'expert']);
+  const RANK = { easy: 0, medium: 1, hard: 2, expert: 3 }, ranks = p.locs.map(l => RANK[l.difficulty]);
+  assert.strictEqual(p.locs.length, 5);
+  assert(ranks.every((r, i) => !i || r >= ranks[i - 1]), 'difficulty never steps down: ' + ranks);
+  assert([0, 1, 2, 3].every(r => ranks.filter(x => x === r).length <= 2), 'at most two of a difficulty: ' + ranks);
   p.locs.forEach(l => {
     const src = DATA.locations.find(d => d.id === l.id);
     assert(src && src.x === l.x && src.z === l.z, 'picked from locations.json: ' + l.id);
   });
-  step('start card for puzzle #3; picks follow the mix easiest first: ' + p.locs.map(l => l.name).join(', '));
+  step('start card for puzzle #3; easiest first, at most two of a difficulty: ' + p.locs.map(l => l.name + ' (' + l.difficulty + ')').join(', '));
 
   await page.click('#startBtn');
   assert.strictEqual(await phase(page), 'guess');
@@ -207,51 +210,17 @@ async function playRound(page, dx, dz, opts) {
   for (let i = 0; i < 5; i++) { await playRound(page, 2000, 0); await next(page); }
   await page.waitForSelector('#results.show');
   assert.deepStrictEqual(await page.$$eval('#stats b', b => b.map(x => x.textContent)).then(v => v.slice(0, 3)), ['3', '1', '2']);
-  assert(await page.locator('#againBtn').isHidden(), 'no Play again on a numbered puzzle');
-  step('missing a day resets the streak (played 3 · streak 1 · best 2); numbered puzzles have no Play again');
+  assert.strictEqual(await page.locator('#againBtn').count(), 0, 'no Play again');
+  step('missing a day resets the streak (played 3 · streak 1 · best 2); no Play again');
 
-  // before the epoch: an unnumbered preview
+  // before the epoch: no puzzle yet
   await page.close();
   page = await newPage(ctx, '2026-10-23T18:00:00Z');
   await page.goto(BASE);
-  await page.waitForSelector('#start.show');
-  assert.strictEqual(await page.textContent('#pno'), 'Preview');
-  await page.click('#startBtn');
-  for (let i = 0; i < 5; i++) { await playRound(page, 0, 50); await next(page); }
-  await page.waitForSelector('#results.show');
-  assert.match(await page.textContent('#shareText'), /^Pintland Tap Preview — \d+\/500\n/);
-  assert.strictEqual(await page.textContent('#resKicker'), 'Preview · game 1');
-  assert.deepStrictEqual(await page.$$eval('#stats b', b => b.map(x => x.textContent)).then(v => v.slice(0, 3)), ['3', '0', '2'], 'preview not counted');
-  assert.match(await page.textContent('#previewNote'), /don't count.*October 24/);
-  step('days before the epoch (Oct 24) play as "Preview" and do not count toward stats');
-
-  // unlimited preview games: Play again starts a new game with different picks, which survives a reload
-  const seen = new Set((await prog(page)).locs.map(l => l.id));
-  for (let game = 2; game <= 4; game++) {
-    await page.click('#againBtn');
-    await page.waitForFunction(() => window.ptGame.phase === 'guess');
-    const g = await prog(page);
-    assert.strictEqual(g.attempt, game);
-    assert.strictEqual(g.rounds.length, 0);
-    assert.deepStrictEqual(g.locs.map(l => l.difficulty), ['medium', 'hard', 'hard', 'expert', 'expert']);
-    if (game === 2) {
-      const overlap = g.locs.filter(l => seen.has(l.id)).length;
-      assert.strictEqual(overlap, 0, 'game 2 avoids game 1 locations');
-      await playRound(page, 0, 0);
-      await page.reload();
-      await page.waitForFunction(() => window.ptGame && window.ptGame.phase === 'reveal');
-      assert.strictEqual((await prog(page)).attempt, 2, 'reload keeps the replay');
-      await next(page);
-      for (let i = 1; i < 5; i++) { await playRound(page, 0, 0); await next(page); }
-    } else {
-      for (let i = 0; i < 5; i++) { await playRound(page, 0, 0); await next(page); }
-    }
-    await page.waitForSelector('#results.show');
-    assert.strictEqual(await page.textContent('#resKicker'), 'Preview · game ' + game);
-    assert.strictEqual(await page.textContent('#resTotal'), '500');
-  }
-  await page.screenshot({ path: path.join(OUT, 'game-preview-again.png') });
-  step('Play again: games 2–4 each get fresh picks (game 2 shares none with game 1), reload-safe, not counted');
+  await page.waitForSelector('#oops.show');
+  assert.match(await page.textContent('#oopsMsg'), /starts on October 24/);
+  assert(!(await page.isVisible('#start.show')), 'no game before launch');
+  step('the day before puzzle #1 says when it starts, with no game');
   await ctx.close();
 
   /* ---------------- extra spots: the closest spot scores ---------------- */
@@ -284,16 +253,16 @@ async function playRound(page, dx, dz, opts) {
 
   /* ---------------- the guess clock ---------------- */
   {
-    console.log('guess clock (4 s here; locations.json sets 15)');
+    console.log('guess clock (4 s here; locations.json sets 10)');
     const tctx = await browser.newContext({ viewport: { width: 1200, height: 800 } });
     const real = await newPage(tctx, '2026-11-05T15:00:00Z', DATA.meta.timer, DATA.meta.epoch);
     await real.goto(BASE);
     await real.waitForSelector('#start.show');
-    assert.strictEqual(DATA.meta.timer, 15);
-    assert.strictEqual(await real.textContent('#ruleSecs'), '15 seconds', 'start card names the real clock');
-    assert.strictEqual(DATA.meta.epoch, '', 'not launched yet');
-    assert.strictEqual(await real.textContent('#pno'), 'Preview', 'with no launch date every day is a preview');
-    assert.strictEqual(await real.textContent('#sKicker'), 'Preview · unlimited games');
+    assert.strictEqual(DATA.meta.timer, 10);
+    assert.strictEqual(await real.textContent('#ruleSecs'), '10 seconds', 'start card names the real clock');
+    assert.strictEqual(DATA.meta.epoch, '2026-10-26', 'puzzle #1 is Oct 26');
+    assert.strictEqual(await real.textContent('#pno'), '#11', 'Nov 5 is puzzle #11');
+    assert.strictEqual(await real.textContent('#sKicker'), 'Puzzle #11');
     await real.close();
 
     const tp = await newPage(tctx, '2026-11-06T15:00:00Z', 4);
@@ -333,7 +302,7 @@ async function playRound(page, dx, dz, opts) {
     const rows = await tp.$$eval('#resRounds tr', t => t.map(x => x.textContent));
     assert.match(rows[1], /Time's up/); assert.match(rows[1], /no guess/);
     assert(!/Time's up/.test(rows[3]), 'locked rounds keep their verdict');
-    step('15 s on the start card; a placed guess locks in at 0 s, no guess scores 0, a reload keeps the clock');
+    step('10 s on the start card; a placed guess locks in at 0 s, no guess scores 0, a reload keeps the clock');
     await tctx.close();
   }
 

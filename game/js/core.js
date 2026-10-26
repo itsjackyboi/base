@@ -126,29 +126,45 @@
     return best;
   }
   var DIFFS = ['easy', 'medium', 'hard', 'expert'];
-  var DEFAULT_MIX = ['medium', 'hard', 'hard', 'expert', 'expert'];
-  var MIN_GAP = 50;   // blocks: two picks on the same day are never closer than this, so one can't give the other away
-  /* Daily rounds by difficulty mix (data.meta.mix, default 1 medium, 2 hard, 2 expert), easiest first. */
+  var ROUNDS = 5, MAX_SAME = 2;
+  /* Every way to split the rounds over the four difficulties with at most maxSame of any one, as counts [easy, medium, hard, expert]. */
+  function mixes(rounds, maxSame) {
+    var out = [];
+    (function walk(i, left, acc) {
+      if (i === DIFFS.length - 1) { if (left <= maxSame) out.push(acc.concat(left)); return; }
+      for (var n = Math.min(maxSame, left); n >= 0; n--) walk(i + 1, left - n, acc.concat(n));
+    })(0, rounds, []);
+    return out;
+  }
+  /* Daily rounds, easiest first, so the difficulty never steps down. Each day uses one of the mixes above (each comes up once
+     per cycle through them). Within a difficulty, picks run through a shuffled pool and don't repeat until it's used up.
+     data.related: groups of location ids (arrays) that are related in the lore; no two from one group share a day.
+     data.meta.minGap (blocks, default 0) optionally keeps same-day picks apart too. */
   function pickDaily(data, puzzleNo) {
-    var mix = (data.meta && data.meta.mix) || DEFAULT_MIX;
-    var gap = data.meta && data.meta.minGap != null ? data.meta.minGap : MIN_GAP;
-    var day = puzzleNo - 1, want = {}, picks = [], have = {};
-    function clear(l) { return picks.every(function (p) { return gapBetween(p, l) >= gap; }); }
-    function take(seq, n) {   // first n of seq that keep their distance; if too few do, fill up from the rest in order
-      var got = seq.filter(function (l) { return !have[l.id]; }).filter(function (l) {
-        if (n > 0 && clear(l)) { picks.push(l); have[l.id] = 1; n--; return false; }
-        return true;
-      });
-      got.slice(0, n).forEach(function (l) { picks.push(l); have[l.id] = 1; });
-    }
-    mix.forEach(function (d) { want[d] = (want[d] || 0) + 1; });
+    var meta = data.meta || {}, rounds = meta.rounds || ROUNDS, maxSame = meta.maxSame || MAX_SAME, gap = meta.minGap || 0;
+    var day = puzzleNo - 1, all = mixes(rounds, maxSame), groupsOf = {};
+    (data.related || []).forEach(function (g, gi) { g.forEach(function (id) { (groupsOf[id] = groupsOf[id] || []).push(gi); }); });
+    function related(a, b) { return (groupsOf[a.id] || []).some(function (g) { return (groupsOf[b.id] || []).indexOf(g) >= 0; }); }
+    function mixOf(d) { return bagOrder(all, 1, d, 707)[0]; }
+    var used = [0, 0, 0, 0];   // picks of each difficulty on earlier days: where today starts in that difficulty's sequence
+    for (var k = 0; k < day; k++) mixOf(k).forEach(function (n, i) { used[i] += n; });
+    var want = mixOf(day), picks = [], have = {}, count = [0, 0, 0, 0];
+    function ok(l) { return !have[l.id] && picks.every(function (p) { return !related(p, l) && (!gap || gapBetween(p, l) >= gap); }); }
+    function add(l) { picks.push(l); have[l.id] = 1; count[DIFFS.indexOf(l.difficulty)]++; }
     DIFFS.forEach(function (d, i) {
-      if (!want[d]) return;
-      var pool = data.locations.filter(function (l) { return l.difficulty === d; });
-      take(bagOrder(pool, want[d], day, 101 + i * 53), Math.min(want[d], pool.length));
+      var pool = data.locations.filter(function (l) { return l.difficulty === d; }), cycles = {};
+      if (!want[i] || !pool.length) return;
+      function at(k) {   // the endless sequence: one shuffle of the pool per cycle
+        var c = Math.floor(k / pool.length);
+        if (!cycles[c]) cycles[c] = shuffled(pool, mulberry32(101 + i * 53 + c * 7919));
+        return cycles[c][k % pool.length];
+      }
+      for (var k = used[i], got = 0; got < want[i] && k < used[i] + 2 * pool.length; k++) if (ok(at(k))) { add(at(k)); got++; }
     });
-    if (picks.length < mix.length) {                           // a difficulty pool ran short: top up from anything left
-      take(shuffled(data.locations.filter(function (l) { return !have[l.id]; }), mulberry32(303 + day)), mix.length - picks.length);
+    if (picks.length < rounds) {   // a pool ran short: top up from anything left, keeping the same-difficulty limit if possible
+      var rest = shuffled(data.locations, mulberry32(303 + day));
+      [function (l) { return ok(l) && count[DIFFS.indexOf(l.difficulty)] < maxSame; }, ok, function (l) { return !have[l.id]; }]
+        .forEach(function (fits) { rest.forEach(function (l) { if (picks.length < rounds && fits(l)) add(l); }); });
     }
     return picks.map(function (p, i) { return { p: p, i: i }; })
       .sort(function (a, b) { return (DIFFS.indexOf(a.p.difficulty) - DIFFS.indexOf(b.p.difficulty)) || (a.i - b.i); })
@@ -179,7 +195,7 @@
     NATIVE_ZOOM: NATIVE_ZOOM, MIN_ZOOM: MIN_ZOOM, MAX_ZOOM: MAX_ZOOM,
     makeCRS: makeCRS, toLL: toLL, fromLL: fromLL, boxToBounds: boxToBounds, dist: dist, spots: spots, nearest: nearest,
     tileBase: tileBase, tileUrl: tileUrl, makeTileLayer: makeTileLayer, makeMap: makeMap, lockTo: lockTo,
-    DIFFS: DIFFS, DEFAULT_MIX: DEFAULT_MIX, MIN_GAP: MIN_GAP, gapBetween: gapBetween, score: score, verdict: verdict, tile: tile,
+    DIFFS: DIFFS, ROUNDS: ROUNDS, MAX_SAME: MAX_SAME, mixes: mixes, gapBetween: gapBetween, score: score, verdict: verdict, tile: tile,
     mulberry32: mulberry32, shuffled: shuffled, bagOrder: bagOrder, bagPick: bagPick, pickDaily: pickDaily,
     ymd: ymd, puzzleNumber: puzzleNumber, secondsToNext: secondsToNext, store: store
   };
